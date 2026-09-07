@@ -1,2 +1,5 @@
 # aperture
-Thin render interface built on NRI, using Slang for cross-backend shader compilation, following the No Graphics API philosophy.
+
+Thin render interface, following the No Graphics API philosophy.
+
+Requires the [Vulkan SDK](https://vulkan.lunarg.com/) (`VULKAN_SDK` must be set).

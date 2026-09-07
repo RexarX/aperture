@@ -1,0 +1,107 @@
+# apertureConfig.cmake - CMake package config for aperture
+#
+# Provides:
+#   aperture::aperture
+#   aperture::vulkan         (Vulkan backend; publicly links volk and VMA)
+#   aperture::c              (when C bindings were installed)
+#   aperture::<ext>          (when an extension was installed, e.g. imgui)
+#   aperture::lib::slang     (imported slang::slang)
+#   aperture::lib::vulkan_headers
+#   aperture::lib::volk
+#   aperture::lib::vma
+#   aperture_copy_runtime()  - copy slang next to a consumer binary
+
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+set(APERTURE_WAS_BUILT_SHARED "@APERTURE_BUILD_SHARED@")
+set(APERTURE_SLANG_SONAME "@APERTURE_SLANG_SONAME@")
+set(APERTURE_SLANG_IMPLIB_NAME "@APERTURE_SLANG_IMPLIB_NAME@")
+set(APERTURE_SLANG_RUNTIME_SUBDIR "@APERTURE_SLANG_RUNTIME_SUBDIR@")
+set(APERTURE_MIN_VULKAN_SDK_VERSION "@APERTURE_MIN_VULKAN_SDK_VERSION@")
+
+set(APERTURE_INSTALL_BINDIR "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_BINDIR@")
+set(APERTURE_INSTALL_LIBDIR "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@")
+set(APERTURE_SLANG_RUNTIME_FILE
+    "${PACKAGE_PREFIX_DIR}/${APERTURE_SLANG_RUNTIME_SUBDIR}/${APERTURE_SLANG_SONAME}")
+
+if(NOT TARGET slang::slang)
+  add_library(slang::slang SHARED IMPORTED)
+  set_target_properties(slang::slang PROPERTIES
+      IMPORTED_LOCATION "${APERTURE_SLANG_RUNTIME_FILE}"
+      IMPORTED_LOCATION_RELEASE "${APERTURE_SLANG_RUNTIME_FILE}"
+      INTERFACE_COMPILE_DEFINITIONS "SLANG_DYNAMIC"
+      INTERFACE_INCLUDE_DIRECTORIES "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_INCLUDEDIR@"
+  )
+  if(WIN32 AND APERTURE_SLANG_IMPLIB_NAME)
+    set_target_properties(slang::slang PROPERTIES
+        IMPORTED_IMPLIB "${APERTURE_INSTALL_LIBDIR}/${APERTURE_SLANG_IMPLIB_NAME}"
+        IMPORTED_IMPLIB_RELEASE "${APERTURE_INSTALL_LIBDIR}/${APERTURE_SLANG_IMPLIB_NAME}"
+    )
+  endif()
+  foreach(_cfg IN ITEMS DEBUG RELWITHDEBINFO MINSIZEREL)
+    set_property(TARGET slang::slang APPEND PROPERTY MAP_IMPORTED_CONFIG_${_cfg} Release)
+  endforeach()
+endif()
+
+if(NOT TARGET aperture::lib::slang)
+  add_library(aperture::lib::slang ALIAS slang::slang)
+endif()
+
+# Vulkan headers come from the consumer's SDK, not this package.
+if(NOT DEFINED ENV{VULKAN_SDK} OR "$ENV{VULKAN_SDK}" STREQUAL "")
+  message(FATAL_ERROR
+      "aperture: VULKAN_SDK is not set. Install Vulkan SDK "
+      "${APERTURE_MIN_VULKAN_SDK_VERSION}+ and set VULKAN_SDK."
+  )
+endif()
+if(EXISTS "$ENV{VULKAN_SDK}/Include/vulkan/vulkan.h")
+  set(_aperture_vk_inc "$ENV{VULKAN_SDK}/Include")
+elseif(EXISTS "$ENV{VULKAN_SDK}/include/vulkan/vulkan.h")
+  set(_aperture_vk_inc "$ENV{VULKAN_SDK}/include")
+else()
+  message(FATAL_ERROR
+      "aperture: could not find vulkan/vulkan.h under VULKAN_SDK=\"$ENV{VULKAN_SDK}\""
+  )
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/apertureTargets.cmake")
+
+if(TARGET aperture::lib::vulkan_headers)
+  set_property(TARGET aperture::lib::vulkan_headers APPEND PROPERTY
+      INTERFACE_INCLUDE_DIRECTORIES "${_aperture_vk_inc}"
+  )
+endif()
+
+if(NOT APERTURE_WAS_BUILT_SHARED)
+  set_property(TARGET aperture::aperture APPEND PROPERTY
+      INTERFACE_LINK_LIBRARIES slang::slang
+  )
+endif()
+
+function(aperture_copy_runtime TARGET)
+  if(NOT TARGET ${TARGET})
+    message(FATAL_ERROR "aperture_copy_runtime: '${TARGET}' is not a target")
+  endif()
+  get_target_property(_type ${TARGET} TYPE)
+  if(NOT (_type STREQUAL "EXECUTABLE" OR _type STREQUAL "SHARED_LIBRARY" OR _type STREQUAL "MODULE_LIBRARY"))
+    return()
+  endif()
+
+  if(APPLE)
+    set_property(TARGET ${TARGET} APPEND PROPERTY BUILD_RPATH "@loader_path")
+    set_property(TARGET ${TARGET} APPEND PROPERTY INSTALL_RPATH "@loader_path")
+  elseif(UNIX)
+    set_property(TARGET ${TARGET} APPEND PROPERTY BUILD_RPATH "$ORIGIN")
+    set_property(TARGET ${TARGET} APPEND PROPERTY INSTALL_RPATH "$ORIGIN")
+  endif()
+
+  add_custom_command(TARGET ${TARGET} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          "${APERTURE_SLANG_RUNTIME_FILE}"
+          "$<TARGET_FILE_DIR:${TARGET}>/"
+      COMMENT "Copy ${APERTURE_SLANG_SONAME} next to ${TARGET}"
+      VERBATIM
+  )
+endfunction()
