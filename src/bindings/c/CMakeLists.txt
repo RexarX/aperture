@@ -11,17 +11,9 @@ set(APERTURE_C_BINDINGS_FILES
     ${APERTURE_C_BINDINGS_SOURCES}
 )
 
-if(APERTURE_BUILD_SHARED)
-  add_library(aperture_c SHARED ${APERTURE_C_BINDINGS_FILES})
-  aperture_target_set_shared_lib_platform(aperture_c)
-  target_compile_definitions(aperture_c
-      PUBLIC APERTURE_C_SHARED
-      PRIVATE APERTURE_C_EXPORTS
-  )
-else()
-  add_library(aperture_c STATIC ${APERTURE_C_BINDINGS_FILES})
-endif()
+set(APERTURE_C_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include" PARENT_SCOPE)
 
+add_library(aperture_c STATIC ${APERTURE_C_BINDINGS_FILES})
 add_library(aperture::c ALIAS aperture_c)
 
 set_target_properties(aperture_c PROPERTIES
@@ -33,6 +25,7 @@ set_target_properties(aperture_c PROPERTIES
     CXX_VISIBILITY_PRESET hidden
     C_VISIBILITY_PRESET hidden
     VISIBILITY_INLINES_HIDDEN ON
+    POSITION_INDEPENDENT_CODE ON
 )
 
 aperture_apply_conventions(aperture_c)
@@ -47,11 +40,7 @@ target_include_directories(aperture_c
         ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-target_link_libraries(aperture_c PRIVATE aperture::aperture)
-
-if(APERTURE_BUILD_SHARED)
-  aperture_copy_slang_runtime(aperture_c)
-endif()
+target_link_libraries(aperture_c PUBLIC aperture::core)
 
 if(APERTURE_ENABLE_INSTALL)
   install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/"

@@ -1,12 +1,12 @@
 function(aperture_add_extension)
-  cmake_parse_arguments(ARG "" "NAME" "SOURCES;HEADERS;PRIVATE_HEADERS" ${ARGN})
+  cmake_parse_arguments(ARG "" "NAME" "SOURCES;HEADERS" ${ARGN})
 
   if(NOT ARG_NAME)
     message(FATAL_ERROR "aperture_add_extension: NAME is required")
   endif()
 
   set(_target "aperture_${ARG_NAME}")
-  set(_files ${ARG_HEADERS} ${ARG_SOURCES} ${ARG_PRIVATE_HEADERS})
+  set(_files ${ARG_HEADERS} ${ARG_SOURCES})
 
   if(NOT _files)
     message(FATAL_ERROR "aperture_add_extension(${ARG_NAME}): SOURCES/HEADERS are required")
@@ -18,6 +18,7 @@ function(aperture_add_extension)
   set_target_properties(${_target} PROPERTIES
       OUTPUT_NAME ${_target}
       EXPORT_NAME ${ARG_NAME}
+      POSITION_INDEPENDENT_CODE ON
   )
 
   aperture_apply_conventions(${_target})
@@ -32,7 +33,7 @@ function(aperture_add_extension)
           ${CMAKE_CURRENT_SOURCE_DIR}/src
   )
 
-  target_link_libraries(${_target} PUBLIC aperture::aperture)
+  target_link_libraries(${_target} PUBLIC aperture::core)
 
   if(APERTURE_ENABLE_INSTALL)
     install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/"

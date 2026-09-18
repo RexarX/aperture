@@ -18,7 +18,8 @@ namespace {
 // to synchronize, same reasoning as the logger's custom-callback storage.
 std::atomic<AssertionHandler> g_custom_assertion_handler{nullptr};
 
-[[nodiscard]] constexpr std::string_view GetFileName(std::string_view path) {
+[[nodiscard]] constexpr std::string_view GetFileName(
+    std::string_view path) noexcept {
   const size_t last_slash = path.find_last_of("/\\");
   return (last_slash != std::string_view::npos) ? path.substr(last_slash + 1)
                                                 : path;
@@ -39,7 +40,7 @@ void DefaultAssertionHandler(std::string_view condition,
 
 std::string FormatAssertionMessage(std::string_view condition,
                                    std::string_view message,
-                                   const std::source_location& loc) {
+                                   const std::source_location& loc) noexcept {
   std::string result;
   result.reserve(256);
 

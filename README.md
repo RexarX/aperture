@@ -2,4 +2,6 @@
 
 Thin render interface, following the No Graphics API philosophy.
 
-Requires the [Vulkan SDK](https://vulkan.lunarg.com/) (`VULKAN_SDK` must be set).
+A LunarG [Vulkan SDK](https://vulkan.lunarg.com/) is used when `VULKAN_SDK` is
+set. If the SDK is missing or disabled, dependencies are taken from
+`find_package` or fetched with CPM.

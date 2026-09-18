@@ -1,10 +1,11 @@
 # apertureConfig.cmake - CMake package config for aperture
 #
 # Provides:
-#   aperture::aperture
-#   aperture::vulkan         (Vulkan backend; publicly links volk and VMA)
-#   aperture::c              (when C bindings were installed)
-#   aperture::<ext>          (when an extension was installed, e.g. imgui)
+#   aperture::aperture       (glue over enabled modules; the shared lib when built shared)
+#   aperture::core           (public C++ API, assert, log, math, platform)
+#   aperture::vulkan         (Vulkan backend)
+#   aperture::c              (C API, when APERTURE_BUILD_C_BINDINGS was ON)
+#   aperture::<ext>          (when an extension was installed)
 #   aperture::lib::slang     (imported slang::slang)
 #   aperture::lib::vulkan_headers
 #   aperture::lib::volk
@@ -49,29 +50,31 @@ if(NOT TARGET aperture::lib::slang)
   add_library(aperture::lib::slang ALIAS slang::slang)
 endif()
 
-# Vulkan headers come from the consumer's SDK, not this package.
-if(NOT DEFINED ENV{VULKAN_SDK} OR "$ENV{VULKAN_SDK}" STREQUAL "")
-  message(FATAL_ERROR
-      "aperture: VULKAN_SDK is not set. Install Vulkan SDK "
-      "${APERTURE_MIN_VULKAN_SDK_VERSION}+ and set VULKAN_SDK."
-  )
-endif()
-if(EXISTS "$ENV{VULKAN_SDK}/Include/vulkan/vulkan.h")
-  set(_aperture_vk_inc "$ENV{VULKAN_SDK}/Include")
-elseif(EXISTS "$ENV{VULKAN_SDK}/include/vulkan/vulkan.h")
-  set(_aperture_vk_inc "$ENV{VULKAN_SDK}/include")
-else()
-  message(FATAL_ERROR
-      "aperture: could not find vulkan/vulkan.h under VULKAN_SDK=\"$ENV{VULKAN_SDK}\""
-  )
-endif()
+set(APERTURE_VULKAN_HEADERS_SOURCE "@APERTURE_VULKAN_HEADERS_SOURCE@")
 
 include("${CMAKE_CURRENT_LIST_DIR}/apertureTargets.cmake")
 
-if(TARGET aperture::lib::vulkan_headers)
-  set_property(TARGET aperture::lib::vulkan_headers APPEND PROPERTY
-      INTERFACE_INCLUDE_DIRECTORIES "${_aperture_vk_inc}"
-  )
+if(APERTURE_VULKAN_HEADERS_SOURCE STREQUAL "sdk")
+  if(NOT DEFINED ENV{VULKAN_SDK} OR "$ENV{VULKAN_SDK}" STREQUAL "")
+    message(FATAL_ERROR
+        "aperture: this package was built against the Vulkan SDK. "
+        "Install Vulkan SDK ${APERTURE_MIN_VULKAN_SDK_VERSION}+ and set VULKAN_SDK."
+    )
+  endif()
+  if(EXISTS "$ENV{VULKAN_SDK}/Include/vulkan/vulkan.h")
+    set(_aperture_vk_inc "$ENV{VULKAN_SDK}/Include")
+  elseif(EXISTS "$ENV{VULKAN_SDK}/include/vulkan/vulkan.h")
+    set(_aperture_vk_inc "$ENV{VULKAN_SDK}/include")
+  else()
+    message(FATAL_ERROR
+        "aperture: could not find vulkan/vulkan.h under VULKAN_SDK=\"$ENV{VULKAN_SDK}\""
+    )
+  endif()
+  if(TARGET aperture::lib::vulkan_headers)
+    set_property(TARGET aperture::lib::vulkan_headers APPEND PROPERTY
+        INTERFACE_INCLUDE_DIRECTORIES "${_aperture_vk_inc}"
+    )
+  endif()
 endif()
 
 if(NOT APERTURE_WAS_BUILT_SHARED)
@@ -104,4 +107,14 @@ function(aperture_copy_runtime TARGET)
       COMMENT "Copy ${APERTURE_SLANG_SONAME} next to ${TARGET}"
       VERBATIM
   )
+
+  if(APERTURE_WAS_BUILT_SHARED AND TARGET aperture::aperture)
+    add_custom_command(TARGET ${TARGET} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:aperture::aperture>"
+            "$<TARGET_FILE_DIR:${TARGET}>/"
+        COMMENT "Copy aperture next to ${TARGET}"
+        VERBATIM
+    )
+  endif()
 endfunction()

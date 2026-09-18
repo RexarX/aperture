@@ -1,17 +1,18 @@
 # Provide `aperture::lib::slang` as an alias of `slang::slang`.
 #
-# Order of preference (when APERTURE_SLANG_USE_VULKAN_SDK is ON):
-#   1. find_package(slang CONFIG) in a 1.4+ Vulkan SDK.
-#   2. Import slang::slang from the SDK's binaries (LunarG ships slang.dll /
-#      slang-compiler.dll and headers, but often omits slangConfig.cmake).
-#   3. find_package(slang) on CMAKE_PREFIX_PATH / the system.
-#   4. Fetch the prebuilt release from GitHub (has cmake/slangConfig.cmake)
-#      and find_package against that prefix.
+# Default resolution:
+#   1. A slang::slang target already in the parent project
+#   2. Vulkan SDK when APERTURE_USE_VULKAN_SDK_SLANG is ON and the SDK is usable
+#   3. find_package(slang) with version >= APERTURE_SLANG_VERSION
+#   4. CPM-fetch the prebuilt GitHub release
+#
+# APERTURE_USE_SYSTEM_SLANG skips the SDK and requires step 3.
 #
 # Runtime DLLs/SOs still need to sit next to consumers; see SlangRuntime.cmake.
 
 include_guard(GLOBAL)
-include(FetchContent)
+include(CPM)
+include(PackageResolve)
 include(SlangRuntime)
 
 if(NOT APERTURE_SLANG_VERSION)
@@ -196,13 +197,11 @@ function(_aperture_fetch_slang_prefix)
   set(_url "https://github.com/shader-slang/slang/releases/download/v${APERTURE_SLANG_VERSION}/${_asset}")
   message(STATUS "Slang: fetching prebuilt CMake package from ${_url}")
 
-  FetchContent_Declare(slang_prebuilt
+  CPMAddPackage(
+      NAME slang_prebuilt
       URL "${_url}"
-      DOWNLOAD_EXTRACT_TIMESTAMP 1
-      DOWNLOAD_NO_PROGRESS 1
-      SOURCE_SUBDIR "ignore CMakeLists.txt"
+      DOWNLOAD_ONLY YES
   )
-  FetchContent_MakeAvailable(slang_prebuilt)
 
   set(slang_prebuilt_SOURCE_DIR "${slang_prebuilt_SOURCE_DIR}" PARENT_SCOPE)
 endfunction()
@@ -212,9 +211,14 @@ function(aperture_setup_slang)
     return()
   endif()
 
-  if(APERTURE_SLANG_USE_VULKAN_SDK AND APERTURE_VULKAN_SDK_FOUND
-      AND NOT APERTURE_VULKAN_SDK_VERSION VERSION_LESS "1.4")
-    # A previous fetch may have cached slang_DIR; don\"t let it hide the SDK.
+  set(_aperture_slang_ready FALSE)
+
+  if(TARGET slang::slang)
+    set(_aperture_slang_ready TRUE)
+  endif()
+
+  if(NOT _aperture_slang_ready AND APERTURE_USE_VULKAN_SDK_SLANG
+      AND APERTURE_VULKAN_SDK_USABLE)
     unset(slang_DIR CACHE)
     _aperture_slang_find_config("${APERTURE_VULKAN_SDK_DIR}")
     if(NOT _found)
@@ -226,30 +230,68 @@ function(aperture_setup_slang)
     else()
       message(STATUS "Slang: found ${slang_VERSION} in Vulkan SDK via find_package")
     endif()
-  endif()
-
-  if(NOT TARGET slang::slang)
-    find_package(slang CONFIG QUIET)
-    if(slang_FOUND AND TARGET slang::slang)
-      message(STATUS "Slang: found ${slang_VERSION} via find_package")
+    if(TARGET slang::slang)
+      set(_aperture_slang_ready TRUE)
     endif()
   endif()
 
-  if(NOT TARGET slang::slang)
+  if(NOT _aperture_slang_ready)
+    if(APERTURE_USE_SYSTEM_SLANG)
+      find_package(slang ${APERTURE_SLANG_VERSION} CONFIG REQUIRED)
+    else()
+      find_package(slang ${APERTURE_SLANG_VERSION} CONFIG QUIET)
+    endif()
+    if(slang_FOUND AND TARGET slang::slang)
+      set(_ok TRUE)
+      if(slang_VERSION)
+        _aperture_version_meets("${slang_VERSION}" "${APERTURE_SLANG_VERSION}" _ok)
+      endif()
+      if(_ok)
+        set(_aperture_slang_ready TRUE)
+        message(STATUS "Slang: found ${slang_VERSION} via find_package")
+      elseif(APERTURE_USE_SYSTEM_SLANG)
+        message(FATAL_ERROR
+            "APERTURE_USE_SYSTEM_SLANG is ON but slang ${slang_VERSION} is older "
+            "than ${APERTURE_SLANG_VERSION}."
+        )
+      else()
+        message(STATUS
+            "Slang: ignoring system slang '${slang_VERSION}' "
+            "(need ${APERTURE_SLANG_VERSION}+)"
+        )
+      endif()
+    elseif(APERTURE_USE_SYSTEM_SLANG)
+      message(FATAL_ERROR
+          "APERTURE_USE_SYSTEM_SLANG is ON but find_package(slang) did not "
+          "provide slang::slang ${APERTURE_SLANG_VERSION}+."
+      )
+    endif()
+  endif()
+
+  if(NOT _aperture_slang_ready AND NOT APERTURE_USE_SYSTEM_SLANG)
+    if(TARGET slang::slang)
+      message(FATAL_ERROR
+          "Slang: find_package created slang::slang ${slang_VERSION} which is "
+          "not ${APERTURE_SLANG_VERSION}+. Uninstall it, or set "
+          "APERTURE_USE_SYSTEM_SLANG=ON to use it anyway."
+      )
+    endif()
     _aperture_fetch_slang_prefix()
     _aperture_slang_find_config("${slang_prebuilt_SOURCE_DIR}")
     if(NOT TARGET slang::slang)
       _aperture_import_slang_from_prefix("${slang_prebuilt_SOURCE_DIR}")
     endif()
     if(TARGET slang::slang)
+      set(_aperture_slang_ready TRUE)
       message(STATUS "Slang: using fetched package from \"${slang_prebuilt_SOURCE_DIR}\"")
     endif()
   endif()
 
-  if(NOT TARGET slang::slang)
+  if(NOT _aperture_slang_ready OR NOT TARGET slang::slang)
     message(FATAL_ERROR
-        "Slang: could not find slang::slang. Install a 1.4+ Vulkan SDK with Slang, "
-        "provide slang via CMAKE_PREFIX_PATH, or allow the GitHub prebuilt fetch."
+        "Slang: could not find slang::slang ${APERTURE_SLANG_VERSION}+. "
+        "Install a Vulkan SDK with Slang, provide slang via find_package / "
+        "CMAKE_PREFIX_PATH, or allow the GitHub prebuilt CPM fetch."
     )
   endif()
 

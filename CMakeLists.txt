@@ -34,6 +34,7 @@ endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   find_path(XLIB_HEADERS NAMES "X11/Xlib.h")
+  find_path(XCB_HEADERS NAMES "xcb/xcb.h")
   find_path(WAYLAND_HEADERS NAMES "wayland-client.h")
 endif()
 
@@ -78,9 +79,13 @@ if(PROJECT_IS_TOP_LEVEL)
 endif()
 
 option(APERTURE_BUILD_C_BINDINGS "Build C bindings" OFF)
-option(APERTURE_BUILD_EXAMPLES "Build examples" OFF)
+option(APERTURE_BUILD_EXAMPLES "Build examples" ${PROJECT_IS_TOP_LEVEL})
 option(APERTURE_BUILD_SHARED "Build aperture as a shared library" OFF)
-option(APERTURE_ENABLE_VULKAN "Enable Vulkan validation layers" ON)
+if(APPLE)
+  option(APERTURE_ENABLE_VULKAN "Compile the Vulkan backend" OFF)
+else()
+  option(APERTURE_ENABLE_VULKAN "Compile the Vulkan backend" ON)
+endif()
 option(APERTURE_ENABLE_VALIDATION_SUPPORT "Enable Vulkan validation layers" ON)
 option(APERTURE_ENABLE_CPU_ROOT_EXTENSION "Enable cpu root extension" ON)
 option(APERTURE_ENABLE_IMGUI_EXTENSION "Enable imgui extension" OFF)
@@ -95,15 +100,70 @@ option(APERTURE_MANAGE_TOOLCHAIN
     "Allow Aperture to set CMAKE_LINKER / CMAKE_AR / CMAKE_RANLIB for the whole project"
     ${PROJECT_IS_TOP_LEVEL})
 
-set(APERTURE_MIN_VULKAN_SDK_VERSION "1.4.354" CACHE STRING
-    "Minimum required Vulkan SDK version"
+set(APERTURE_MIN_VULKAN_SDK_VERSION "1.4.357" CACHE STRING
+    "Minimum Vulkan SDK / Vulkan-Headers version"
 )
 set(APERTURE_SLANG_VERSION "2026.16.1" CACHE STRING
     "Slang version to fetch from GitHub releases if not found via find_package"
 )
-option(APERTURE_SLANG_USE_VULKAN_SDK
-    "Use Slang from the Vulkan SDK (OFF: fetch the GitHub Slang release)"
+set(APERTURE_VULKAN_HEADERS_VERSION "1.4.357" CACHE STRING
+    "Vulkan-Headers version fetched via CPM when the SDK / find_package is unused"
+)
+set(APERTURE_VOLK_VERSION "1.4.357.0" CACHE STRING
+    "volk version fetched via CPM when the SDK / find_package is unused"
+)
+set(APERTURE_VMA_VERSION "3.4.0" CACHE STRING
+    "VulkanMemoryAllocator version fetched via CPM when the SDK / find_package is unused"
+)
+
+option(APERTURE_USE_VULKAN_SDK
+    "Allow using packages from a located Vulkan SDK"
     ON
+)
+option(APERTURE_USE_SYSTEM_VULKAN_HEADERS
+    "Require Vulkan headers from find_package (VulkanHeaders or Vulkan)"
+    OFF
+)
+option(APERTURE_USE_SYSTEM_VOLK
+    "Require volk from find_package"
+    OFF
+)
+option(APERTURE_USE_SYSTEM_VMA
+    "Require VulkanMemoryAllocator from find_package"
+    OFF
+)
+option(APERTURE_USE_SYSTEM_SLANG
+    "Require slang from find_package"
+    OFF
+)
+option(APERTURE_USE_SYSTEM_GLFW
+    "Require glfw3 from find_package"
+    OFF
+)
+
+cmake_dependent_option(APERTURE_USE_VULKAN_SDK_VK_HEADERS
+    "Use Vulkan headers from the Vulkan SDK"
+    ON
+    "APERTURE_USE_VULKAN_SDK;NOT APERTURE_USE_SYSTEM_VULKAN_HEADERS"
+    OFF
+)
+cmake_dependent_option(APERTURE_USE_VULKAN_SDK_VOLK
+    "Use volk from the Vulkan SDK"
+    ON
+    "APERTURE_USE_VULKAN_SDK;NOT APERTURE_USE_SYSTEM_VOLK"
+    OFF
+)
+cmake_dependent_option(APERTURE_USE_VULKAN_SDK_VMA
+    "Use VMA from the Vulkan SDK"
+    ON
+    "APERTURE_USE_VULKAN_SDK;NOT APERTURE_USE_SYSTEM_VMA"
+    OFF
+)
+cmake_dependent_option(APERTURE_USE_VULKAN_SDK_SLANG
+    "Use Slang from the Vulkan SDK"
+    ON
+    "APERTURE_USE_VULKAN_SDK;NOT APERTURE_USE_SYSTEM_SLANG"
+    OFF
 )
 
 include(ClangArchiver)
@@ -152,27 +212,40 @@ aperture_print_sanitizer_status()
 
 set(APERTURE_ROOT_DIR ${PROJECT_SOURCE_DIR})
 
-# Slang FetchContent defaults to ${CMAKE_BINARY_DIR}/_deps, which duplicates
-# the same archives for every preset. Keep sources under build/_deps and leave
-# each preset's generate/build tree in build/<preset>.
-if(PROJECT_IS_TOP_LEVEL)
-  set(FETCHCONTENT_BASE_DIR "${APERTURE_ROOT_DIR}/build/_deps" CACHE PATH
-      "Shared FetchContent download/source directory (reused across presets)" FORCE
+# Downloads live in <root>/.cpm_cache so every preset reuses the same sources.
+# Per-preset FetchContent build trees stay under CMAKE_BINARY_DIR/_deps.
+# CPM.cmake writes CPM_SOURCE_CACHE=OFF into the cache when unset; replace that
+# default, but keep an explicit user or environment path.
+if(DEFINED ENV{CPM_SOURCE_CACHE})
+  set(CPM_SOURCE_CACHE "$ENV{CPM_SOURCE_CACHE}" CACHE PATH
+      "Directory to download CPM dependencies" FORCE
   )
-  message(STATUS "FetchContent sources: ${FETCHCONTENT_BASE_DIR}")
+elseif(NOT CPM_SOURCE_CACHE OR CPM_SOURCE_CACHE STREQUAL "OFF")
+  set(CPM_SOURCE_CACHE "${APERTURE_ROOT_DIR}/.cpm_cache" CACHE PATH
+      "Directory to download CPM dependencies" FORCE
+  )
 endif()
+if(FETCHCONTENT_BASE_DIR STREQUAL "${APERTURE_ROOT_DIR}/build/_deps")
+  unset(FETCHCONTENT_BASE_DIR CACHE)
+endif()
+
+include(CPM)
+message(STATUS "CPM source cache: ${CPM_SOURCE_CACHE}")
 
 add_subdirectory(third-party)
 
-# Vulkan SDK is required. Creates aperture::lib::{vulkan_headers,volk,vma}.
+# Locate the Vulkan SDK when allowed. Individual packages (headers, volk,
+# VMA, Slang) decide whether to use it via APERTURE_USE_VULKAN_SDK_*.
 include(VulkanSDK)
 
 if(APERTURE_ENABLE_VULKAN)
-  include(Vulkan)
+  include(VulkanHeaders)
+  include(Volk)
+  include(Vma)
 endif()
 
-# Slang: find_package against the Vulkan SDK / CMAKE_PREFIX_PATH, otherwise
-# fetch the official prebuilt CMake package. Creates aperture::lib::slang.
+# Slang: SDK / find_package / CPM-fetched GitHub release.
+# Creates aperture::lib::slang.
 include(Slang)
 aperture_setup_slang()
 

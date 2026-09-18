@@ -2,28 +2,32 @@
 #
 # Requires APERTURE_ENABLE_INSTALL=ON.
 #
-# Core (aperture.lib) links Slang only. The Vulkan backend is a separate
-# static library that publicly links volk and VMA. Consumers that want
-# Vulkan link aperture::vulkan (which also pulls aperture::aperture).
+# `aperture::aperture` is the glue over every enabled module (core,
+# backends, extensions, and C bindings when APERTURE_BUILD_C_BINDINGS).
+# Shared builds produce one DLL; static builds keep separate archives and
+# the glue is INTERFACE. C consumers of the glue get C headers only.
 # slang-compiler still ships beside bin/ because Slang is a shared library.
-# Consumers still need a Vulkan SDK for headers when using the Vulkan backend.
+# Consumers need a Vulkan SDK for headers only when this build used SDK headers.
 
 include_guard(GLOBAL)
 
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 
-set(_aperture_export_targets aperture aperture_vulkan_headers aperture_volk aperture_vma)
-if(TARGET aperture_c)
-  list(APPEND _aperture_export_targets aperture_c)
-endif()
-get_property(_aperture_backend_targets GLOBAL PROPERTY APERTURE_BACKEND_TARGETS)
-if(_aperture_backend_targets)
-  list(APPEND _aperture_export_targets ${_aperture_backend_targets})
-endif()
-get_property(_aperture_extension_targets GLOBAL PROPERTY APERTURE_EXTENSION_TARGETS)
-if(_aperture_extension_targets)
-  list(APPEND _aperture_export_targets ${_aperture_extension_targets})
+set(_aperture_export_targets aperture aperture_vulkan_headers)
+if(NOT APERTURE_BUILD_SHARED)
+  list(APPEND _aperture_export_targets aperture_core aperture_volk aperture_vma)
+  if(TARGET aperture_c)
+    list(APPEND _aperture_export_targets aperture_c)
+  endif()
+  get_property(_aperture_backend_targets GLOBAL PROPERTY APERTURE_BACKEND_TARGETS)
+  if(_aperture_backend_targets)
+    list(APPEND _aperture_export_targets ${_aperture_backend_targets})
+  endif()
+  get_property(_aperture_extension_targets GLOBAL PROPERTY APERTURE_EXTENSION_TARGETS)
+  if(_aperture_extension_targets)
+    list(APPEND _aperture_export_targets ${_aperture_extension_targets})
+  endif()
 endif()
 
 install(TARGETS ${_aperture_export_targets}

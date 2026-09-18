@@ -465,7 +465,8 @@ function(aperture_target_apply_linker TARGET)
     return()
   endif()
   get_target_property(_type ${TARGET} TYPE)
-  if(_type STREQUAL "INTERFACE_LIBRARY" OR _type STREQUAL "UTILITY")
+  if(_type STREQUAL "INTERFACE_LIBRARY" OR _type STREQUAL "UTILITY"
+      OR _type STREQUAL "OBJECT_LIBRARY")
     return()
   endif()
 
@@ -574,7 +575,8 @@ function(aperture_target_apply_lto_mode TARGET)
     return()
   endif()
   get_target_property(_type ${TARGET} TYPE)
-  if(_type STREQUAL "INTERFACE_LIBRARY" OR _type STREQUAL "UTILITY")
+  if(_type STREQUAL "INTERFACE_LIBRARY" OR _type STREQUAL "UTILITY"
+      OR _type STREQUAL "OBJECT_LIBRARY")
     return()
   endif()
 

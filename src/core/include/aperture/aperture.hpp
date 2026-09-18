@@ -1,1 +1,19 @@
 #pragma once
+
+#include <aperture/adapter.hpp>
+#include <aperture/assert.hpp>
+#include <aperture/capability.hpp>
+#include <aperture/commands.hpp>
+#include <aperture/device.hpp>
+#include <aperture/format.hpp>
+#include <aperture/instance.hpp>
+#include <aperture/log.hpp>
+#include <aperture/math.hpp>
+#include <aperture/pipeline.hpp>
+#include <aperture/queue.hpp>
+#include <aperture/result.hpp>
+#include <aperture/surface.hpp>
+#include <aperture/swapchain.hpp>
+#include <aperture/sync.hpp>
+#include <aperture/texture.hpp>
+#include <aperture/types.hpp>

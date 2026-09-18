@@ -4,6 +4,22 @@ include_guard(GLOBAL)
 
 include(CheckIPOSupported)
 
+# MSVC's default CMAKE_CXX_FLAGS include /EHsc /GR. Adding /EHs-c- /GR- on
+# top of those produces D9025 override warnings on every translation unit.
+if(MSVC)
+  foreach(_aperture_flag_var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG
+          CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELWITHDEBINFO
+          CMAKE_CXX_FLAGS_MINSIZEREL)
+    if(DEFINED ${_aperture_flag_var})
+      string(REGEX REPLACE "(/|-)EH[a-zA-Z-]*" "" ${_aperture_flag_var}
+          "${${_aperture_flag_var}}")
+      string(REGEX REPLACE "(/|-)GR-?" "" ${_aperture_flag_var}
+          "${${_aperture_flag_var}}")
+    endif()
+  endforeach()
+  unset(_aperture_flag_var)
+endif()
+
 function(aperture_target_set_warnings TARGET)
   set(MSVC_WARNINGS
       /W4
@@ -39,6 +55,7 @@ function(aperture_target_set_warnings TARGET)
       -Wdouble-promotion
       -Wformat=2
       -Wimplicit-fallthrough
+      -Wno-missing-field-initializers
   )
 
   set(GCC_WARNINGS
@@ -212,6 +229,24 @@ function(aperture_target_set_output_dirs TARGET)
   )
 endfunction()
 
+function(aperture_target_disable_rtti_exceptions TARGET)
+  target_compile_options(${TARGET} PRIVATE
+      $<$<OR:$<CXX_COMPILER_ID:MSVC>,$<AND:$<CXX_COMPILER_ID:Clang>,$<PLATFORM_ID:Windows>>>:
+          /GR-
+          /EHs-c-
+      >
+      $<$<AND:$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang,AppleClang>>,$<NOT:$<PLATFORM_ID:Windows>>>:
+          -fno-rtti
+          -fno-exceptions
+      >
+  )
+  target_compile_definitions(${TARGET} PRIVATE
+      $<$<OR:$<CXX_COMPILER_ID:MSVC>,$<AND:$<CXX_COMPILER_ID:Clang>,$<PLATFORM_ID:Windows>>>:
+          _HAS_EXCEPTIONS=0
+      >
+  )
+endfunction()
+
 function(aperture_target_set_cxx_standard TARGET)
   cmake_parse_arguments(ARG "" "STANDARD" "" ${ARGN})
 
@@ -268,6 +303,7 @@ function(aperture_apply_conventions TARGET)
   endif()
 
   aperture_target_set_cxx_standard(${TARGET} STANDARD ${ARG_STANDARD})
+  aperture_target_disable_rtti_exceptions(${TARGET})
 
   if(NOT ARG_NO_PLATFORM)
     aperture_target_set_platform(${TARGET})

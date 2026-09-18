@@ -5,21 +5,25 @@
 extern "C" {
 #endif
 
-#if defined(APERTURE_C_SHARED)
-#  if defined(_WIN32)
-#    if defined(APERTURE_C_EXPORTS)
-#      define APERTURE_C_API __declspec(dllexport)
-#    else
-#      define APERTURE_C_API __declspec(dllimport)
-#    endif
-#  else
-#    define APERTURE_C_API __attribute__((visibility("default")))
-#  endif
+#ifdef APERTURE_BUILD_SHARED
+#ifdef _WIN32
+#ifdef APERTURE_EXPORTS
+#define APERTURE_C_API __declspec(dllexport)
 #else
-#  define APERTURE_C_API
+#define APERTURE_C_API __declspec(dllimport)
+#endif
+#else
+#define APERTURE_C_API __attribute__((visibility("default")))
+#endif
+#else
+#define APERTURE_C_API
 #endif
 
+#ifdef __cplusplus
+APERTURE_C_API const char* aperture_version(void) noexcept;
+#else
 APERTURE_C_API const char* aperture_version(void);
+#endif
 
 #ifdef __cplusplus
 }

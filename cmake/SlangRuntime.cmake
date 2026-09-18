@@ -33,4 +33,14 @@ function(aperture_copy_slang_runtime TARGET)
       COMMENT "Copy slang compiler next to ${TARGET}"
       VERBATIM
   )
+
+  if(APERTURE_BUILD_SHARED AND TARGET aperture AND NOT "${TARGET}" STREQUAL "aperture")
+    add_custom_command(TARGET ${TARGET} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:aperture>"
+            "$<TARGET_FILE_DIR:${TARGET}>/"
+        COMMENT "Copy aperture next to ${TARGET}"
+        VERBATIM
+    )
+  endif()
 endfunction()

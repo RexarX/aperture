@@ -23,7 +23,7 @@ namespace {
 std::atomic<Callback> g_custom_logger{nullptr};
 
 void DefaultLog(Level level, std::string_view message) noexcept {
-  std::FILE* stream = level >= Level::kWarn ? stderr : stdout;
+  std::FILE* stream = level >= Level::Warn ? stderr : stdout;
   const std::string_view level_str = ToString(level);
 
 #if APERTURE_HAS_STD_PRINT
