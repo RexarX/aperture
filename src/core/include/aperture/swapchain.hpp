@@ -1,8 +1,9 @@
 #pragma once
 
+#include <aperture/utils/flags.hpp>
+
 #include <cstdint>
 #include <string_view>
-#include <utility>
 
 namespace aperture {
 
@@ -35,40 +36,8 @@ enum class PresentMode : uint16_t {
   return "Flags";
 }
 
-[[nodiscard]] constexpr PresentMode operator|(PresentMode lhs,
-                                              PresentMode rhs) noexcept {
-  return static_cast<PresentMode>(std::to_underlying(lhs) |
-                                  std::to_underlying(rhs));
-}
-
-[[nodiscard]] constexpr PresentMode operator&(PresentMode lhs,
-                                              PresentMode rhs) noexcept {
-  return static_cast<PresentMode>(std::to_underlying(lhs) &
-                                  std::to_underlying(rhs));
-}
-
-[[nodiscard]] constexpr PresentMode operator~(PresentMode value) noexcept {
-  return static_cast<PresentMode>(~std::to_underlying(value));
-}
-
-constexpr PresentMode& operator|=(PresentMode& lhs, PresentMode rhs) noexcept {
-  lhs = lhs | rhs;
-  return lhs;
-}
-
-constexpr PresentMode& operator&=(PresentMode& lhs, PresentMode rhs) noexcept {
-  lhs = lhs & rhs;
-  return lhs;
-}
-
-/// @brief True if every bit in `bits` is set in `set`.
-/// @param set Mask to test
-/// @param bits Required bits
-/// @return `true` if `(set & bits) == bits`
-[[nodiscard]] constexpr bool HasAll(PresentMode set,
-                                    PresentMode bits) noexcept {
-  return (set & bits) == bits;
-}
+template <>
+inline constexpr bool IS_FLAGS<PresentMode> = true;
 
 /// @brief Swapchain. Pointer-sized CPU handle.
 struct Swapchain {

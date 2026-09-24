@@ -457,13 +457,8 @@ void WireAdapterChains(Adapter* record) noexcept {
 
   info->name = record->properties.properties.deviceName;
   info->conformance_reason = ConformanceReason(*record);
-  if (!info->conformance_reason.empty()) {
-    info->conformant = false;
-    info->conformance = Error::Unsupported;
-  } else {
-    info->conformant = true;
-    info->conformance = Error::Ok;
-  }
+  info->conformance =
+      info->conformance_reason.empty() ? Error::Ok : Error::Unsupported;
 
   info->vendor_id = record->properties.properties.vendorID;
   info->device_id = record->properties.properties.deviceID;
@@ -517,7 +512,7 @@ void WireAdapterChains(Adapter* record) noexcept {
   }
 
   const VkPhysicalDeviceLimits& limits = record->properties.properties.limits;
-  info->timestamp_period_ns = limits.timestampPeriod;
+  info->timestamps.period_ns = limits.timestampPeriod;
   const VkQueueFamilyProperties* copy_family = nullptr;
   const VkQueueFamilyProperties* graphics_family = nullptr;
   for (const VkQueueFamilyProperties& family : record->queue_families) {
@@ -555,16 +550,16 @@ void WireAdapterChains(Adapter* record) noexcept {
     }
     const VkQueueFlags flags = family.queueFlags;
     if ((flags & VK_QUEUE_GRAPHICS_BIT) != 0) {
-      info->graphics_timestamps = true;
+      info->timestamps.graphics = true;
     }
     if ((flags & VK_QUEUE_COMPUTE_BIT) != 0 &&
         (flags & VK_QUEUE_GRAPHICS_BIT) == 0) {
-      info->compute_timestamps = true;
+      info->timestamps.compute = true;
     }
     if ((flags & VK_QUEUE_TRANSFER_BIT) != 0 &&
         (flags & VK_QUEUE_GRAPHICS_BIT) == 0 &&
         (flags & VK_QUEUE_COMPUTE_BIT) == 0) {
-      info->copy_timestamps = true;
+      info->timestamps.copy = true;
     }
   }
 

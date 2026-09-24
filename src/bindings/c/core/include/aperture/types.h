@@ -110,6 +110,15 @@ typedef struct ApertureCopyGranularity {
   uint32_t z;
 } ApertureCopyGranularity;
 
+/// @brief Timestamp tick period and which queue kinds can write them.
+/// @details `period_ns` is zero when timestamps are unsupported.
+typedef struct ApertureTimestampSupport {
+  float period_ns;
+  bool graphics;
+  bool compute;
+  bool copy;
+} ApertureTimestampSupport;
+
 /// @brief Host-mapped allocation plus its device address.
 typedef struct ApertureDualPtr {
   void* host;

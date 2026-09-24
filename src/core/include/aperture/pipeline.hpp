@@ -9,22 +9,63 @@
 
 namespace aperture {
 
-/// @brief Compiled pipeline object. `Invalid` is never a live pipeline.
-enum class Pipeline : uint8_t { Invalid = 0 };
+/// @brief Pointer-sized CPU handle for a compiled pipeline.
+struct Pipeline {
+  void* ptr = nullptr;
+
+  /// @brief True if this handle is non-null.
+  /// @return `true` when `ptr != nullptr`
+  [[nodiscard]] constexpr explicit operator bool() const noexcept {
+    return ptr != nullptr;
+  }
+
+  [[nodiscard]] constexpr bool operator==(const Pipeline&) const noexcept =
+      default;
+  [[nodiscard]] constexpr bool operator!=(const Pipeline&) const noexcept =
+      default;
+};
 
 /// @brief One compiled module in a native backend encoding.
 /// @details `code` is borrowed. Aperture does not copy, take ownership, or
 /// read a filesystem path.
 struct ShaderBlob {
   std::span<const std::byte> code;
+  /// Entry point name. Empty is `Error::Invalid` at pipeline create.
+  std::string_view entry;
   ShaderFormat format = ShaderFormat::Invalid;
 };
 
-/// @brief Depth/stencil state object. `Invalid` is never a live state.
-enum class DepthStencilState : uint8_t { Invalid = 0 };
+/// @brief Pointer-sized CPU handle for depth/stencil state.
+struct DepthStencilState {
+  void* ptr = nullptr;
 
-/// @brief Blend state object. `Invalid` is never a live state.
-enum class BlendState : uint8_t { Invalid = 0 };
+  /// @brief True if this handle is non-null.
+  /// @return `true` when `ptr != nullptr`
+  [[nodiscard]] constexpr explicit operator bool() const noexcept {
+    return ptr != nullptr;
+  }
+
+  [[nodiscard]] constexpr bool operator==(
+      const DepthStencilState&) const noexcept = default;
+  [[nodiscard]] constexpr bool operator!=(
+      const DepthStencilState&) const noexcept = default;
+};
+
+/// @brief Pointer-sized CPU handle for blend state.
+struct BlendState {
+  void* ptr = nullptr;
+
+  /// @brief True if this handle is non-null.
+  /// @return `true` when `ptr != nullptr`
+  [[nodiscard]] constexpr explicit operator bool() const noexcept {
+    return ptr != nullptr;
+  }
+
+  [[nodiscard]] constexpr bool operator==(const BlendState&) const noexcept =
+      default;
+  [[nodiscard]] constexpr bool operator!=(const BlendState&) const noexcept =
+      default;
+};
 
 /// @brief Raster polygon fill mode.
 enum class PolygonMode : uint8_t { Fill, Line };

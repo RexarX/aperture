@@ -6,33 +6,23 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/// @brief Compiled pipeline object. `INVALID` is never a live pipeline.
-typedef struct AperturePipeline {
-  uint8_t id;
-} AperturePipeline;
-
-enum { APERTURE_PIPELINE_INVALID = 0U };
+/// @brief Pointer-sized CPU handle for a compiled pipeline. Invalid is `NULL`.
+typedef struct AperturePipelineImpl* AperturePipeline;
 
 /// @brief One compiled module in a native backend encoding.
 typedef struct ApertureShaderBlob {
   const void* code;
   size_t size;
+  const char* entry;
+  size_t entry_size;
   ApertureShaderFormat format;
 } ApertureShaderBlob;
 
-/// @brief Depth/stencil state object. `INVALID` is never a live state.
-typedef struct ApertureDepthStencilState {
-  uint8_t id;
-} ApertureDepthStencilState;
+/// @brief Pointer-sized CPU handle for depth/stencil state. Invalid is `NULL`.
+typedef struct ApertureDepthStencilStateImpl* ApertureDepthStencilState;
 
-enum { APERTURE_DEPTH_STENCIL_STATE_INVALID = 0U };
-
-/// @brief Blend state object. `INVALID` is never a live state.
-typedef struct ApertureBlendState {
-  uint8_t id;
-} ApertureBlendState;
-
-enum { APERTURE_BLEND_STATE_INVALID = 0U };
+/// @brief Pointer-sized CPU handle for blend state. Invalid is `NULL`.
+typedef struct ApertureBlendStateImpl* ApertureBlendState;
 
 /// @brief Raster polygon fill mode.
 typedef uint8_t AperturePolygonMode;

@@ -104,6 +104,15 @@ struct CopyGranularity {
   uint32_t z = 1;
 };
 
+/// @brief Timestamp tick period and which queue kinds can write them.
+/// @details `period_ns` is zero when timestamps are unsupported.
+struct TimestampSupport {
+  float period_ns = 0.0F;
+  bool graphics = false;
+  bool compute = false;
+  bool copy = false;
+};
+
 /// @brief 64-bit device address. Matches the shader-visible `GpuPtr<T>` on
 /// every addressing profile.
 /// @tparam T Pointer type on the device

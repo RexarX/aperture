@@ -32,12 +32,8 @@ typedef struct ApertureSizeAlign {
   uint32_t heap;
 } ApertureSizeAlign;
 
-/// @brief CPU handle for a texture object. `INVALID` is never a live texture.
-typedef struct ApertureTexture {
-  uint8_t id;
-} ApertureTexture;
-
-enum { APERTURE_TEXTURE_INVALID = 0U };
+/// @brief Pointer-sized CPU handle for a texture object. Invalid is `NULL`.
+typedef struct ApertureTextureImpl* ApertureTexture;
 
 /// @brief Creation / barrier usage mask for a texture.
 typedef uint32_t ApertureTextureUsage;

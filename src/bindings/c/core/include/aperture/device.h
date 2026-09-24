@@ -53,7 +53,7 @@ typedef struct ApertureDeviceInfo {
   ApertureGpuPtr texture_heap_device;
   ApertureGpuPtr sampler_heap_device;
   uint64_t texture_heap_alignment;
-  float timestamp_period_ns;
+  ApertureTimestampSupport timestamps;
   uint32_t texture_descriptor_stride;
   uint32_t sampler_descriptor_stride;
   uint32_t texture_heap_slots;
@@ -63,9 +63,6 @@ typedef struct ApertureDeviceInfo {
   uint32_t max_cpu_root_bytes;
   ApertureCopyGranularity copy_texture_granularity;
   ApertureAddressingProfile profile;
-  bool graphics_timestamps;
-  bool compute_timestamps;
-  bool copy_timestamps;
 } ApertureDeviceInfo;
 
 /// @brief Native API of this device.

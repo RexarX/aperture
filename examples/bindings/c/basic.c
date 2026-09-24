@@ -23,11 +23,12 @@ static void log_adapter_gpu_fields(const ApertureAdapter* adapter) {
       "  heap_align=%llu timestamp_period_ns=%g copy_gran=%u/%u/%u "
       "timestamps g/c/c=%s/%s/%s",
       (unsigned long long)adapter->texture_heap_alignment,
-      (double)adapter->timestamp_period_ns, adapter->copy_texture_granularity.x,
-      adapter->copy_texture_granularity.y, adapter->copy_texture_granularity.z,
-      adapter->graphics_timestamps ? "yes" : "no",
-      adapter->compute_timestamps ? "yes" : "no",
-      adapter->copy_timestamps ? "yes" : "no");
+      (double)adapter->timestamps.period_ns,
+      adapter->copy_texture_granularity.x, adapter->copy_texture_granularity.y,
+      adapter->copy_texture_granularity.z,
+      adapter->timestamps.graphics ? "yes" : "no",
+      adapter->timestamps.compute ? "yes" : "no",
+      adapter->timestamps.copy ? "yes" : "no");
   aperture_log_infof("  descriptor_stride tex/samp=%u/%u",
                      adapter->texture_descriptor_stride,
                      adapter->sampler_descriptor_stride);
@@ -77,16 +78,16 @@ static void log_device_info(const ApertureDeviceInfo* info) {
       info->texture_heap_slots, info->sampler_heap_slots,
       info->max_cpu_root_bytes,
       (unsigned long long)info->texture_heap_alignment,
-      (double)info->timestamp_period_ns, info->copy_texture_granularity.x,
+      (double)info->timestamps.period_ns, info->copy_texture_granularity.x,
       info->copy_texture_granularity.y, info->copy_texture_granularity.z);
   aperture_log_infof(
       "  descriptor_stride tex/samp=%u/%u null_slots tex/samp=%u/%u",
       info->texture_descriptor_stride, info->sampler_descriptor_stride,
       info->null_texture_slot, info->null_sampler_slot);
   aperture_log_infof("  timestamps g/c/c=%s/%s/%s",
-                     info->graphics_timestamps ? "yes" : "no",
-                     info->compute_timestamps ? "yes" : "no",
-                     info->copy_timestamps ? "yes" : "no");
+                     info->timestamps.graphics ? "yes" : "no",
+                     info->timestamps.compute ? "yes" : "no",
+                     info->timestamps.copy ? "yes" : "no");
   aperture_log_infof("  heap_device tex=0x%llx samp=0x%llx",
                      (unsigned long long)info->texture_heap_device.addr,
                      (unsigned long long)info->sampler_heap_device.addr);
@@ -204,11 +205,13 @@ int main() {
   int chosen = -1;
   for (size_t i = 0; i < adapter_count; ++i) {
     const ApertureAdapter adapter = aperture_adapter(instance, (uint32_t)i);
-    aperture_log_infof(
-        "adapter %u: %.*s%s", adapter.index, (int)adapter.name_size,
-        adapter.name,
-        adapter.conformant ? " [conformant]" : " [non-conformant]");
-    if (!adapter.conformant && adapter.conformance_reason_size > 0) {
+    aperture_log_infof("adapter %u: %.*s%s", adapter.index,
+                       (int)adapter.name_size, adapter.name,
+                       aperture_adapter_conformant(&adapter)
+                           ? " [conformant]"
+                           : " [non-conformant]");
+    if (!aperture_adapter_conformant(&adapter) &&
+        adapter.conformance_reason_size > 0) {
       aperture_log_infof("  reason: %.*s", (int)adapter.conformance_reason_size,
                          adapter.conformance_reason);
     }
@@ -226,7 +229,7 @@ int main() {
                        adapter.max_texture_dimension_2d);
     log_adapter_gpu_fields(&adapter);
     log_adapter_capabilities(&adapter);
-    if (chosen < 0 && adapter.conformant) {
+    if (chosen < 0 && aperture_adapter_conformant(&adapter)) {
       chosen = (int)i;
     }
   }
@@ -347,7 +350,8 @@ int main() {
   }
 
   error = aperture_malloc(device, 1024U * sizeof(uint32_t), alignof(uint32_t),
-                          APERTURE_MEMORY_DEFAULT, shared_usage, &numbers);
+                          APERTURE_MEMORY_DEFAULT, shared_usage,
+                          APERTURE_MALLOC_FLAGS_NONE, &numbers);
   if (error != APERTURE_ERROR_OK) {
     aperture_log_errorf("Malloc failed (%s)!", aperture_error_to_string(error));
     goto cleanup;
@@ -382,8 +386,9 @@ int main() {
                      (unsigned long long)tail_gpu.gpu.addr,
                      (unsigned long long)tail_gpu.size);
 
-  error = aperture_malloc(device, 16U, alignof(uint8_t),
-                          APERTURE_MEMORY_READBACK, shared_usage, &readback);
+  error =
+      aperture_malloc(device, 16U, alignof(uint8_t), APERTURE_MEMORY_READBACK,
+                      shared_usage, APERTURE_MALLOC_FLAGS_NONE, &readback);
   if (error != APERTURE_ERROR_OK) {
     aperture_log_errorf("Malloc Readback failed (%s)!",
                         aperture_error_to_string(error));
@@ -395,8 +400,9 @@ int main() {
                      ((uint8_t*)readback.host)[0],
                      ((uint8_t*)readback.host)[15]);
 
-  error = aperture_malloc_gpu(device, 256U * sizeof(uint32_t),
-                              alignof(uint32_t), shared_usage, &gpu_only);
+  error =
+      aperture_malloc_gpu(device, 256U * sizeof(uint32_t), alignof(uint32_t),
+                          shared_usage, APERTURE_MALLOC_FLAGS_NONE, &gpu_only);
   if (error != APERTURE_ERROR_OK) {
     aperture_log_errorf("MallocGpu failed (%s)!",
                         aperture_error_to_string(error));
@@ -405,11 +411,11 @@ int main() {
   aperture_log_infof("malloc_gpu count=256 gpu=0x%llx",
                      (unsigned long long)gpu_only.addr);
 
-  error = aperture_malloc_gpu_dedicated(device, 64U * sizeof(uint32_t),
-                                        alignof(uint32_t), shared_usage,
-                                        &gpu_dedicated);
+  error = aperture_malloc_gpu(device, 64U * sizeof(uint32_t), alignof(uint32_t),
+                              shared_usage, APERTURE_MALLOC_FLAGS_DEDICATED,
+                              &gpu_dedicated);
   if (error != APERTURE_ERROR_OK) {
-    aperture_log_errorf("MallocGpuDedicated failed (%s)!",
+    aperture_log_errorf("MallocGpu Dedicated failed (%s)!",
                         aperture_error_to_string(error));
     goto cleanup;
   }
@@ -417,8 +423,9 @@ int main() {
                      (unsigned long long)gpu_dedicated.addr);
 
   const size_t bump_bytes = 64U * 1024U;
-  error = aperture_malloc(device, bump_bytes, 16, APERTURE_MEMORY_DEFAULT,
-                          shared_usage, &bump_storage);
+  error =
+      aperture_malloc(device, bump_bytes, 16, APERTURE_MEMORY_DEFAULT,
+                      shared_usage, APERTURE_MALLOC_FLAGS_NONE, &bump_storage);
   if (error != APERTURE_ERROR_OK) {
     aperture_log_errorf("Bump storage Malloc failed (%s)!",
                         aperture_error_to_string(error));
@@ -489,18 +496,18 @@ int main() {
                      offset_report.largest_free_region);
 
   const size_t dedicated_bytes = 4U * 1024U;
-  error = aperture_malloc_dedicated(device, dedicated_bytes, 16,
-                                    APERTURE_MEMORY_DEFAULT, shared_usage,
-                                    &dedicated);
+  error = aperture_malloc(device, dedicated_bytes, 16, APERTURE_MEMORY_DEFAULT,
+                          APERTURE_QUEUE_USAGE_GRAPHICS,
+                          APERTURE_MALLOC_FLAGS_DEDICATED, &dedicated);
   if (error != APERTURE_ERROR_OK) {
-    aperture_log_errorf("MallocDedicated failed (%s)!",
+    aperture_log_errorf("Malloc Dedicated failed (%s)!",
                         aperture_error_to_string(error));
     goto cleanup;
   }
 
   dedicated_bump = aperture_bump_allocator_create(dedicated_bytes);
   if (dedicated_bump == NULL) {
-    aperture_log_error("BumpAllocator over MallocDedicated create failed!");
+    aperture_log_error("BumpAllocator over dedicated Malloc create failed!");
     error = APERTURE_ERROR_OUT_OF_MEMORY;
     goto cleanup;
   }
@@ -508,7 +515,7 @@ int main() {
   ApertureBumpAllocation dedicated_span = aperture_bump_allocator_allocate(
       dedicated_bump, 8U * sizeof(uint32_t), alignof(uint32_t));
   if (!aperture_bump_allocation_ok(dedicated_span)) {
-    aperture_log_error("BumpAllocator over MallocDedicated failed!");
+    aperture_log_error("BumpAllocator over dedicated Malloc failed!");
     error = APERTURE_ERROR_OUT_OF_MEMORY;
     goto cleanup;
   }

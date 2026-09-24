@@ -1,5 +1,7 @@
 #pragma once
 
+#include <aperture/utils/flags.hpp>
+
 #include <cstdint>
 #include <string_view>
 #include <utility>
@@ -23,22 +25,28 @@ enum class Memory : uint8_t { Default, Readback };
   return "Unknown";
 }
 
-/// @brief Index buffer element type.
-enum class IndexType : uint8_t { U16, U32 };
+/// @brief Placement flags for `Malloc` and `MallocGpu`.
+enum class MallocFlags : uint32_t {
+  None = 0,
+  Dedicated = 1U << 0U,
+};
 
-/// @brief Name of an `IndexType` enumerator.
-/// @param type Enumerator to convert
-/// @return Enumerator name, or `"Unknown"`
-[[nodiscard]] constexpr std::string_view ToString(IndexType type) noexcept {
-  switch (type) {
-    using enum IndexType;
-    case U16:
-      return "U16";
-    case U32:
-      return "U32";
+/// @brief Name of a `MallocFlags` enumerator.
+/// @param flags Exact enumerator or `None`. Combined masks return `"Flags"`.
+/// @return Enumerator name, `"Flags"`, or `"Unknown"`
+[[nodiscard]] constexpr std::string_view ToString(MallocFlags flags) noexcept {
+  switch (flags) {
+    using enum MallocFlags;
+    case None:
+      return "None";
+    case Dedicated:
+      return "Dedicated";
   }
-  return "Unknown";
+  return "Flags";
 }
+
+template <>
+inline constexpr bool IS_FLAGS<MallocFlags> = true;
 
 /// @brief Pipeline stages for barriers and timeline waits.
 enum class Stage : uint32_t {
@@ -94,35 +102,8 @@ enum class Stage : uint32_t {
   return "Flags";
 }
 
-[[nodiscard]] constexpr Stage operator|(Stage lhs, Stage rhs) noexcept {
-  return static_cast<Stage>(std::to_underlying(lhs) | std::to_underlying(rhs));
-}
-
-[[nodiscard]] constexpr Stage operator&(Stage lhs, Stage rhs) noexcept {
-  return static_cast<Stage>(std::to_underlying(lhs) & std::to_underlying(rhs));
-}
-
-[[nodiscard]] constexpr Stage operator~(Stage value) noexcept {
-  return static_cast<Stage>(~std::to_underlying(value));
-}
-
-constexpr Stage& operator|=(Stage& lhs, Stage rhs) noexcept {
-  lhs = lhs | rhs;
-  return lhs;
-}
-
-constexpr Stage& operator&=(Stage& lhs, Stage rhs) noexcept {
-  lhs = lhs & rhs;
-  return lhs;
-}
-
-/// @brief True if every bit in `bits` is set in `set`.
-/// @param set Mask to test
-/// @param bits Required bits
-/// @return `true` if `(set & bits) == bits`
-[[nodiscard]] constexpr bool HasAll(Stage set, Stage bits) noexcept {
-  return (set & bits) == bits;
-}
+template <>
+inline constexpr bool IS_FLAGS<Stage> = true;
 
 /// @brief Extra hazard bits that are not implied by `Stage` alone.
 enum class Hazard : uint32_t {
@@ -153,35 +134,8 @@ enum class Hazard : uint32_t {
   return "Flags";
 }
 
-[[nodiscard]] constexpr Hazard operator|(Hazard lhs, Hazard rhs) noexcept {
-  return static_cast<Hazard>(std::to_underlying(lhs) | std::to_underlying(rhs));
-}
-
-[[nodiscard]] constexpr Hazard operator&(Hazard lhs, Hazard rhs) noexcept {
-  return static_cast<Hazard>(std::to_underlying(lhs) & std::to_underlying(rhs));
-}
-
-[[nodiscard]] constexpr Hazard operator~(Hazard value) noexcept {
-  return static_cast<Hazard>(~std::to_underlying(value));
-}
-
-constexpr Hazard& operator|=(Hazard& lhs, Hazard rhs) noexcept {
-  lhs = lhs | rhs;
-  return lhs;
-}
-
-constexpr Hazard& operator&=(Hazard& lhs, Hazard rhs) noexcept {
-  lhs = lhs & rhs;
-  return lhs;
-}
-
-/// @brief True if every bit in `bits` is set in `set`.
-/// @param set Mask to test
-/// @param bits Required bits
-/// @return `true` if `(set & bits) == bits`
-[[nodiscard]] constexpr bool HasAll(Hazard set, Hazard bits) noexcept {
-  return (set & bits) == bits;
-}
+template <>
+inline constexpr bool IS_FLAGS<Hazard> = true;
 
 /// @brief Parameters for `CreateCommandPool`.
 /// @details `max_timestamps` is the number of `WriteTimestamp` calls one

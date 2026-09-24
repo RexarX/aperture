@@ -42,19 +42,22 @@ typedef struct ApertureAdapter {
   uint32_t max_sampler_heap_slots;
   uint32_t max_texture_dimension_2d;
   uint32_t subgroup_size;
-  float timestamp_period_ns;
+  ApertureTimestampSupport timestamps;
   ApertureCopyGranularity copy_texture_granularity;
   uint8_t uuid[16];
   uint8_t luid[8];
   AperturePresentMode present_modes;
   ApertureError conformance;
   bool discrete;
-  bool conformant;
   bool luid_valid;
-  bool graphics_timestamps;
-  bool compute_timestamps;
-  bool copy_timestamps;
 } ApertureAdapter;
+
+/// @brief True when the adapter meets the backend floor.
+/// @param adapter Adapter to query
+/// @return `true` if `adapter` is non-null and `conformance` is `OK`
+static inline bool aperture_adapter_conformant(const ApertureAdapter* adapter) {
+  return adapter != NULL && adapter->conformance == APERTURE_ERROR_OK;
+}
 
 /// @brief True if the adapter reported every bit in `caps`.
 /// @param adapter Adapter to query

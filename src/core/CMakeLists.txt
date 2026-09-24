@@ -6,6 +6,7 @@ set(APERTURE_CORE_HEADERS
     include/aperture/memory/offset_allocator.hpp
     include/aperture/utils/bit.hpp
     include/aperture/utils/defer.hpp
+    include/aperture/utils/flags.hpp
     include/aperture/utils/format.hpp
     include/aperture/utils/macro.hpp
     include/aperture/adapter.hpp

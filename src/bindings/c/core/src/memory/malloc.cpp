@@ -18,28 +18,13 @@ extern "C" {
 
 ApertureError aperture_malloc(ApertureDevice device, size_t bytes, size_t align,
                               ApertureMemory memory, ApertureQueueUsage usage,
+                              ApertureMallocFlags flags,
                               ApertureDualPtr* out) noexcept {
   APERTURE_ASSERT(out != nullptr);
   auto result = aperture::Malloc(aperture::cbind::ToCpp(device), bytes, align,
                                  static_cast<aperture::Memory>(memory),
-                                 static_cast<aperture::QueueUsage>(usage));
-  if (!result) [[unlikely]] {
-    *out = {};
-    return aperture::cbind::ToCError(result.error());
-  }
-  *out = aperture::cbind::ToC(*result);
-  return APERTURE_ERROR_OK;
-}
-
-ApertureError aperture_malloc_dedicated(ApertureDevice device, size_t bytes,
-                                        size_t align, ApertureMemory memory,
-                                        ApertureQueueUsage usage,
-                                        ApertureDualPtr* out) noexcept {
-  APERTURE_ASSERT(out != nullptr);
-  auto result =
-      aperture::MallocDedicated(aperture::cbind::ToCpp(device), bytes, align,
-                                static_cast<aperture::Memory>(memory),
-                                static_cast<aperture::QueueUsage>(usage));
+                                 static_cast<aperture::QueueUsage>(usage),
+                                 static_cast<aperture::MallocFlags>(flags));
   if (!result) [[unlikely]] {
     *out = {};
     return aperture::cbind::ToCError(result.error());
@@ -50,27 +35,13 @@ ApertureError aperture_malloc_dedicated(ApertureDevice device, size_t bytes,
 
 ApertureError aperture_malloc_gpu(ApertureDevice device, size_t bytes,
                                   size_t align, ApertureQueueUsage usage,
+                                  ApertureMallocFlags flags,
                                   ApertureGpuPtr* out) noexcept {
   APERTURE_ASSERT(out != nullptr);
   auto result =
       aperture::MallocGpu(aperture::cbind::ToCpp(device), bytes, align,
-                          static_cast<aperture::QueueUsage>(usage));
-  if (!result) [[unlikely]] {
-    *out = {};
-    return aperture::cbind::ToCError(result.error());
-  }
-  *out = aperture::cbind::ToC(*result);
-  return APERTURE_ERROR_OK;
-}
-
-ApertureError aperture_malloc_gpu_dedicated(ApertureDevice device, size_t bytes,
-                                            size_t align,
-                                            ApertureQueueUsage usage,
-                                            ApertureGpuPtr* out) noexcept {
-  APERTURE_ASSERT(out != nullptr);
-  auto result =
-      aperture::MallocGpuDedicated(aperture::cbind::ToCpp(device), bytes, align,
-                                   static_cast<aperture::QueueUsage>(usage));
+                          static_cast<aperture::QueueUsage>(usage),
+                          static_cast<aperture::MallocFlags>(flags));
   if (!result) [[unlikely]] {
     *out = {};
     return aperture::cbind::ToCError(result.error());

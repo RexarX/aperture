@@ -1,8 +1,9 @@
 #pragma once
 
+#include <aperture/utils/flags.hpp>
+
 #include <cstdint>
 #include <string_view>
-#include <utility>
 
 namespace aperture {
 
@@ -50,8 +51,21 @@ struct SizeAlign {
   uint32_t heap = 0;
 };
 
-/// @brief CPU handle for a texture object. `Invalid` is never a live texture.
-enum class Texture : uint8_t { Invalid = 0 };
+/// @brief Pointer-sized CPU handle for a texture object.
+struct Texture {
+  void* ptr = nullptr;
+
+  /// @brief True if this handle is non-null.
+  /// @return `true` when `ptr != nullptr`
+  [[nodiscard]] constexpr explicit operator bool() const noexcept {
+    return ptr != nullptr;
+  }
+
+  [[nodiscard]] constexpr bool operator==(const Texture&) const noexcept =
+      default;
+  [[nodiscard]] constexpr bool operator!=(const Texture&) const noexcept =
+      default;
+};
 
 /// @brief Creation / barrier usage mask for a texture.
 enum class TextureUsage : uint32_t {
@@ -85,38 +99,8 @@ enum class TextureUsage : uint32_t {
   return "Flags";
 }
 
-[[nodiscard]] constexpr TextureUsage operator|(TextureUsage lhs,
-                                               TextureUsage rhs) noexcept {
-  return static_cast<TextureUsage>(std::to_underlying(lhs) |
-                                   std::to_underlying(rhs));
-}
-
-[[nodiscard]] constexpr TextureUsage operator&(TextureUsage lhs,
-                                               TextureUsage rhs) noexcept {
-  return static_cast<TextureUsage>(std::to_underlying(lhs) &
-                                   std::to_underlying(rhs));
-}
-
-[[nodiscard]] constexpr TextureUsage operator~(TextureUsage value) noexcept {
-  return static_cast<TextureUsage>(~std::to_underlying(value));
-}
-
-constexpr TextureUsage& operator|=(TextureUsage& lhs,
-                                   TextureUsage rhs) noexcept {
-  lhs = lhs | rhs;
-  return lhs;
-}
-
-constexpr TextureUsage& operator&=(TextureUsage& lhs,
-                                   TextureUsage rhs) noexcept {
-  lhs = lhs & rhs;
-  return lhs;
-}
-
-[[nodiscard]] constexpr bool HasAll(TextureUsage set,
-                                    TextureUsage bits) noexcept {
-  return (set & bits) == bits;
-}
+template <>
+inline constexpr bool IS_FLAGS<TextureUsage> = true;
 
 /// @brief Magnification / minification filter.
 enum class Filter : uint8_t { Nearest, Linear };

@@ -131,7 +131,13 @@ namespace aperture::cbind {
       .texture_heap_device = ToC(info.texture_heap_device),
       .sampler_heap_device = ToC(info.sampler_heap_device),
       .texture_heap_alignment = info.texture_heap_alignment,
-      .timestamp_period_ns = info.timestamp_period_ns,
+      .timestamps =
+          {
+              .period_ns = info.timestamps.period_ns,
+              .graphics = info.timestamps.graphics,
+              .compute = info.timestamps.compute,
+              .copy = info.timestamps.copy,
+          },
       .texture_descriptor_stride = info.texture_descriptor_stride,
       .sampler_descriptor_stride = info.sampler_descriptor_stride,
       .texture_heap_slots = info.texture_heap_slots,
@@ -146,9 +152,6 @@ namespace aperture::cbind {
               .z = info.copy_texture_granularity.z,
           },
       .profile = static_cast<ApertureAddressingProfile>(info.profile),
-      .graphics_timestamps = info.graphics_timestamps,
-      .compute_timestamps = info.compute_timestamps,
-      .copy_timestamps = info.copy_timestamps,
   };
 }
 
@@ -220,7 +223,10 @@ namespace aperture::cbind {
   out.max_sampler_heap_slots = adapter.max_sampler_heap_slots;
   out.max_texture_dimension_2d = adapter.max_texture_dimension_2d;
   out.subgroup_size = adapter.subgroup_size;
-  out.timestamp_period_ns = adapter.timestamp_period_ns;
+  out.timestamps.period_ns = adapter.timestamps.period_ns;
+  out.timestamps.graphics = adapter.timestamps.graphics;
+  out.timestamps.compute = adapter.timestamps.compute;
+  out.timestamps.copy = adapter.timestamps.copy;
   out.copy_texture_granularity = {
       .x = adapter.copy_texture_granularity.x,
       .y = adapter.copy_texture_granularity.y,
@@ -232,11 +238,7 @@ namespace aperture::cbind {
   out.present_modes = static_cast<AperturePresentMode>(adapter.present_modes);
   out.conformance = ToCError(adapter.conformance);
   out.discrete = adapter.discrete;
-  out.conformant = adapter.conformant;
   out.luid_valid = adapter.luid_valid;
-  out.graphics_timestamps = adapter.graphics_timestamps;
-  out.compute_timestamps = adapter.compute_timestamps;
-  out.copy_timestamps = adapter.copy_timestamps;
   return out;
 }
 

@@ -83,24 +83,16 @@ namespace {
 }  // namespace
 
 auto Malloc(Device* device, size_t bytes, size_t align, Memory memory,
-            QueueUsage usage) noexcept -> Result<DualPtr<std::byte>> {
-  return MallocImpl(device, bytes, align, memory, usage, false);
+            QueueUsage usage, MallocFlags flags) noexcept
+    -> Result<DualPtr<std::byte>> {
+  return MallocImpl(device, bytes, align, memory, usage,
+                    HasAll(flags, MallocFlags::Dedicated));
 }
 
-auto MallocDedicated(Device* device, size_t bytes, size_t align, Memory memory,
-                     QueueUsage usage) noexcept -> Result<DualPtr<std::byte>> {
-  return MallocImpl(device, bytes, align, memory, usage, true);
-}
-
-auto MallocGpu(Device* device, size_t bytes, size_t align,
-               QueueUsage usage) noexcept -> Result<GpuPtr<std::byte>> {
-  return MallocGpuImpl(device, bytes, align, usage, false);
-}
-
-auto MallocGpuDedicated(Device* device, size_t bytes, size_t align,
-                        QueueUsage usage) noexcept
-    -> Result<GpuPtr<std::byte>> {
-  return MallocGpuImpl(device, bytes, align, usage, true);
+auto MallocGpu(Device* device, size_t bytes, size_t align, QueueUsage usage,
+               MallocFlags flags) noexcept -> Result<GpuPtr<std::byte>> {
+  return MallocGpuImpl(device, bytes, align, usage,
+                       HasAll(flags, MallocFlags::Dedicated));
 }
 
 }  // namespace aperture::vk

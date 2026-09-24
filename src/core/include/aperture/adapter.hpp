@@ -44,20 +44,22 @@ struct Adapter {
   uint32_t max_sampler_heap_slots = 0;
   uint32_t max_texture_dimension_2d = 0;
   uint32_t subgroup_size = 0;
-  /// Nanoseconds per timestamp tick.
-  float timestamp_period_ns = 0.0F;
+  TimestampSupport timestamps;
   CopyGranularity copy_texture_granularity;
   uint8_t uuid[16] = {};
   uint8_t luid[8] = {};
   PresentMode present_modes = PresentMode::None;
   Error conformance = Error::Ok;
   bool discrete = false;
-  bool conformant = false;
   bool luid_valid = false;
-  bool graphics_timestamps = false;
-  bool compute_timestamps = false;
-  bool copy_timestamps = false;
 };
+
+/// @brief True when the adapter meets the backend floor.
+/// @param adapter Adapter to query
+/// @return `true` if `conformance == Error::Ok`
+[[nodiscard]] constexpr bool Conformant(const Adapter& adapter) noexcept {
+  return adapter.conformance == Error::Ok;
+}
 
 /// @brief True if the adapter reported every bit in `caps`.
 /// @param adapter Adapter to query

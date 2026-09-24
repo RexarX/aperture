@@ -1,11 +1,12 @@
 #include <aperture/aperture.hpp>
 #include <aperture/utils/defer.hpp>
 #include <aperture/vulkan.hpp>
-#include <common/window.hpp>
 
 #ifdef CreateWindow
 #undef CreateWindow
 #endif
+
+#include <common/window.hpp>
 
 #include <algorithm>
 #include <cstdint>
@@ -26,10 +27,10 @@ void LogAdapterGpuFields(const aperture::Adapter& adapter) {
   log::Info(
       "  heap_align={} timestamp_period_ns={} copy_gran={}/{}/{} "
       "timestamps g/c/c={}/{}/{}",
-      adapter.texture_heap_alignment, adapter.timestamp_period_ns,
+      adapter.texture_heap_alignment, adapter.timestamps.period_ns,
       adapter.copy_texture_granularity.x, adapter.copy_texture_granularity.y,
-      adapter.copy_texture_granularity.z, adapter.graphics_timestamps,
-      adapter.compute_timestamps, adapter.copy_timestamps);
+      adapter.copy_texture_granularity.z, adapter.timestamps.graphics,
+      adapter.timestamps.compute, adapter.timestamps.copy);
   log::Info("  descriptor_stride tex/samp={}/{}",
             adapter.texture_descriptor_stride,
             adapter.sampler_descriptor_stride);
@@ -59,13 +60,13 @@ void LogDeviceInfo(const aperture::DeviceInfo& info) {
       "heap_align={} timestamp_period_ns={} copy_gran={}/{}/{}",
       ToString(info.profile), info.texture_heap_slots, info.sampler_heap_slots,
       info.max_cpu_root_bytes, info.texture_heap_alignment,
-      info.timestamp_period_ns, info.copy_texture_granularity.x,
+      info.timestamps.period_ns, info.copy_texture_granularity.x,
       info.copy_texture_granularity.y, info.copy_texture_granularity.z);
   log::Info("  descriptor_stride tex/samp={}/{} null_slots tex/samp={}/{}",
             info.texture_descriptor_stride, info.sampler_descriptor_stride,
             info.null_texture_slot, info.null_sampler_slot);
-  log::Info("  timestamps g/c/c={}/{}/{}", info.graphics_timestamps,
-            info.compute_timestamps, info.copy_timestamps);
+  log::Info("  timestamps g/c/c={}/{}/{}", info.timestamps.graphics,
+            info.timestamps.compute, info.timestamps.copy);
   log::Info("  heap_device tex={:#x} samp={:#x}", info.texture_heap_device.addr,
             info.sampler_heap_device.addr);
 }
@@ -161,8 +162,8 @@ int main() {
 
   for (const Adapter& adapter : adapters) {
     log::Info("adapter {}: {}{}", adapter.index, adapter.name,
-              adapter.conformant ? " [conformant]" : " [non-conformant]");
-    if (!adapter.conformant && !adapter.conformance_reason.empty()) {
+              Conformant(adapter) ? " [conformant]" : " [non-conformant]");
+    if (!Conformant(adapter) && !adapter.conformance_reason.empty()) {
       log::Info("  reason: {}", adapter.conformance_reason);
     }
     log::Info(
@@ -179,7 +180,7 @@ int main() {
 
   const auto chosen_adapter = std::ranges::find_if(
       adapters,
-      [](const Adapter& adapter) noexcept { return adapter.conformant; });
+      [](const Adapter& adapter) noexcept { return Conformant(adapter); });
   if (chosen_adapter == adapters.end()) {
     log::Error("No conformant adapter!");
     return 1;
@@ -315,9 +316,10 @@ int main() {
   };
   log::Info("malloc_gpu count=256 gpu={:#x}", gpu_only.addr);
 
-  auto gpu_dedicated_result = MallocGpuDedicated<uint32_t>(device, 64);
+  auto gpu_dedicated_result =
+      MallocGpu<uint32_t>(device, 64, shared_usage, MallocFlags::Dedicated);
   if (!gpu_dedicated_result) {
-    log::Error("MallocGpuDedicated failed ({})!",
+    log::Error("MallocGpu Dedicated failed ({})!",
                ToString(gpu_dedicated_result.error()));
     return 1;
   }
@@ -375,9 +377,10 @@ int main() {
             report.largest_free_region);
 
   constexpr size_t dedicated_bytes = 4U * 1024U;
-  auto dedicated_result = MallocDedicated(device, dedicated_bytes, 16);
+  auto dedicated_result = Malloc(device, dedicated_bytes, 16, Memory::Default,
+                                 QueueUsage::Graphics, MallocFlags::Dedicated);
   if (!dedicated_result) {
-    log::Error("MallocDedicated failed ({})!",
+    log::Error("Malloc Dedicated failed ({})!",
                ToString(dedicated_result.error()));
     return 1;
   }
@@ -388,7 +391,7 @@ int main() {
   BumpAllocator dedicated_bump(dedicated_bytes);
   const auto dedicated_span = dedicated_bump.Allocate<uint32_t>(8);
   if (!dedicated_span) {
-    log::Error("BumpAllocator over MallocDedicated failed!");
+    log::Error("BumpAllocator over dedicated Malloc failed!");
     return 1;
   }
   const DualRange dedicated_range = Slice(dedicated, dedicated_span);

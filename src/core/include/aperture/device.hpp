@@ -64,8 +64,7 @@ struct DeviceInfo {
   GpuPtr<std::byte> sampler_heap_device;
   /// Power-of-two quantum. Every texture `SizeAlign::align` divides it.
   uint64_t texture_heap_alignment = 0;
-  /// Nanoseconds per timestamp tick. Zero when timestamps are unsupported.
-  float timestamp_period_ns = 0.0F;
+  TimestampSupport timestamps;
   uint32_t texture_descriptor_stride = 0;
   uint32_t sampler_descriptor_stride = 0;
   uint32_t texture_heap_slots = 0;
@@ -76,9 +75,6 @@ struct DeviceInfo {
   uint32_t max_cpu_root_bytes = 0;
   CopyGranularity copy_texture_granularity;
   AddressingProfile profile = AddressingProfile::Pointer;
-  bool graphics_timestamps = false;
-  bool compute_timestamps = false;
-  bool copy_timestamps = false;
 };
 
 /// @brief Native API of this device.

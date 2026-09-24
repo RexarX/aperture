@@ -190,7 +190,7 @@ void AddQueueCreateInfo(QueueSelection* queues, uint32_t family) noexcept {
 
   Adapter& selected = inst->records[desc.adapter];
   const aperture::Adapter& selected_info = inst->adapters[desc.adapter];
-  if (!selected_info.conformant) [[unlikely]] {
+  if (!Conformant(selected_info)) [[unlikely]] {
     LogFailed(log, "Adapter '{}' is not conformant: {} ({})!",
               selected_info.name, selected_info.conformance_reason,
               ToString(selected_info.conformance));
@@ -609,7 +609,7 @@ void FillDeviceInfo(Device* device, const aperture::Adapter& info,
   APERTURE_ASSERT(device != nullptr);
   device->info.profile = AddressingProfile::Pointer;
   device->info.texture_heap_alignment = info.texture_heap_alignment;
-  device->info.timestamp_period_ns = info.timestamp_period_ns;
+  device->info.timestamps.period_ns = info.timestamps.period_ns;
   device->info.texture_descriptor_stride = info.texture_descriptor_stride;
   device->info.sampler_descriptor_stride = info.sampler_descriptor_stride;
   device->info.texture_heap_slots = desc.texture_heap_slots;
@@ -623,10 +623,10 @@ void FillDeviceInfo(Device* device, const aperture::Adapter& info,
     return family < record.queue_families.size() &&
            record.queue_families[family].timestampValidBits != 0;
   };
-  device->info.graphics_timestamps = timestamped(queues.graphics_family);
-  device->info.compute_timestamps =
+  device->info.timestamps.graphics = timestamped(queues.graphics_family);
+  device->info.timestamps.compute =
       queues.want_compute && timestamped(queues.compute_family);
-  device->info.copy_timestamps =
+  device->info.timestamps.copy =
       queues.want_copy && timestamped(queues.copy_family);
 }
 

@@ -30,26 +30,26 @@ static inline const char* aperture_memory_to_string(ApertureMemory memory) {
   }
 }
 
-/// @brief Index buffer element type.
-typedef uint8_t ApertureIndexType;
+/// @brief Placement flags for malloc.
+typedef uint32_t ApertureMallocFlags;
 
 enum {
-  APERTURE_INDEX_TYPE_U16 = 0U,
-  APERTURE_INDEX_TYPE_U32,
+  APERTURE_MALLOC_FLAGS_NONE = 0U,
+  APERTURE_MALLOC_FLAGS_DEDICATED = 1U << 0U,
 };
 
-/// @brief Name of an `ApertureIndexType` enumerator.
-/// @param type Enumerator to convert
-/// @return Enumerator name, or `"Unknown"`
-static inline const char* aperture_index_type_to_string(
-    ApertureIndexType type) {
-  switch (type) {
-    case APERTURE_INDEX_TYPE_U16:
-      return "U16";
-    case APERTURE_INDEX_TYPE_U32:
-      return "U32";
+/// @brief Name of an `ApertureMallocFlags` enumerator.
+/// @param flags Exact enumerator or `NONE`. Combined masks return `"Flags"`.
+/// @return Enumerator name, `"Flags"`, or `"Unknown"`
+static inline const char* aperture_malloc_flags_to_string(
+    ApertureMallocFlags flags) {
+  switch (flags) {
+    case APERTURE_MALLOC_FLAGS_NONE:
+      return "None";
+    case APERTURE_MALLOC_FLAGS_DEDICATED:
+      return "Dedicated";
     default:
-      return "Unknown";
+      return "Flags";
   }
 }
 

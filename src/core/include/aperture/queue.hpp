@@ -3,6 +3,7 @@
 #include <aperture/device.hpp>
 #include <aperture/platform.hpp>
 #include <aperture/result.hpp>
+#include <aperture/utils/flags.hpp>
 
 namespace aperture {
 
@@ -29,39 +30,8 @@ enum class QueueUsage : uint32_t {
   return "Flags";
 }
 
-[[nodiscard]] constexpr QueueUsage operator|(QueueUsage lhs,
-                                             QueueUsage rhs) noexcept {
-  return static_cast<QueueUsage>(std::to_underlying(lhs) |
-                                 std::to_underlying(rhs));
-}
-
-[[nodiscard]] constexpr QueueUsage operator&(QueueUsage lhs,
-                                             QueueUsage rhs) noexcept {
-  return static_cast<QueueUsage>(std::to_underlying(lhs) &
-                                 std::to_underlying(rhs));
-}
-
-[[nodiscard]] constexpr QueueUsage operator~(QueueUsage value) noexcept {
-  return static_cast<QueueUsage>(~std::to_underlying(value));
-}
-
-constexpr QueueUsage& operator|=(QueueUsage& lhs, QueueUsage rhs) noexcept {
-  lhs = lhs | rhs;
-  return lhs;
-}
-
-constexpr QueueUsage& operator&=(QueueUsage& lhs, QueueUsage rhs) noexcept {
-  lhs = lhs & rhs;
-  return lhs;
-}
-
-/// @brief True if every bit in `bits` is set in `set`.
-/// @param set Mask to test
-/// @param bits Required bits
-/// @return `true` if `(set & bits) == bits`
-[[nodiscard]] constexpr bool HasAll(QueueUsage set, QueueUsage bits) noexcept {
-  return (set & bits) == bits;
-}
+template <>
+inline constexpr bool IS_FLAGS<QueueUsage> = true;
 
 /// @brief Pointer-sized CPU handle for a queue.
 struct Queue {
