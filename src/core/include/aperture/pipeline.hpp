@@ -1,6 +1,10 @@
 #pragma once
 
+#include <aperture/types.hpp>
+
+#include <cstddef>
 #include <cstdint>
+#include <span>
 #include <string_view>
 
 namespace aperture {
@@ -8,63 +12,19 @@ namespace aperture {
 /// @brief Compiled pipeline object. `Invalid` is never a live pipeline.
 enum class Pipeline : uint8_t { Invalid = 0 };
 
-/// @brief Name of a `Pipeline` enumerator.
-/// @param pipeline Enumerator to convert
-/// @return Enumerator name, or `"Unknown"`
-[[nodiscard]] constexpr std::string_view ToString(Pipeline pipeline) noexcept {
-  switch (pipeline) {
-    using enum Pipeline;
-    case Invalid:
-      return "Invalid";
-  }
-  return "Unknown";
-}
-
-/// @brief Linked shader program. `Invalid` is never a live program.
-enum class Program : uint8_t { Invalid = 0 };
-
-/// @brief Name of a `Program` enumerator.
-/// @param program Enumerator to convert
-/// @return Enumerator name, or `"Unknown"`
-[[nodiscard]] constexpr std::string_view ToString(Program program) noexcept {
-  switch (program) {
-    using enum Program;
-    case Invalid:
-      return "Invalid";
-  }
-  return "Unknown";
-}
+/// @brief One compiled module in a native backend encoding.
+/// @details `code` is borrowed. Aperture does not copy, take ownership, or
+/// read a filesystem path.
+struct ShaderBlob {
+  std::span<const std::byte> code;
+  ShaderFormat format = ShaderFormat::Invalid;
+};
 
 /// @brief Depth/stencil state object. `Invalid` is never a live state.
 enum class DepthStencilState : uint8_t { Invalid = 0 };
 
-/// @brief Name of a `DepthStencilState` enumerator.
-/// @param state Enumerator to convert
-/// @return Enumerator name, or `"Unknown"`
-[[nodiscard]] constexpr std::string_view ToString(
-    DepthStencilState state) noexcept {
-  switch (state) {
-    using enum DepthStencilState;
-    case Invalid:
-      return "Invalid";
-  }
-  return "Unknown";
-}
-
 /// @brief Blend state object. `Invalid` is never a live state.
 enum class BlendState : uint8_t { Invalid = 0 };
-
-/// @brief Name of a `BlendState` enumerator.
-/// @param state Enumerator to convert
-/// @return Enumerator name, or `"Unknown"`
-[[nodiscard]] constexpr std::string_view ToString(BlendState state) noexcept {
-  switch (state) {
-    using enum BlendState;
-    case Invalid:
-      return "Invalid";
-  }
-  return "Unknown";
-}
 
 /// @brief Raster polygon fill mode.
 enum class PolygonMode : uint8_t { Fill, Line };
@@ -119,25 +79,9 @@ enum class FrontFace : uint8_t { Ccw, Cw };
   return "Unknown";
 }
 
-/// @brief Matrix memory layout in shader / C++ mirrors.
-enum class MatrixLayout : uint8_t { ColumnMajor, RowMajor };
-
-/// @brief Name of a `MatrixLayout` enumerator.
-/// @param layout Enumerator to convert
-/// @return Enumerator name, or `"Unknown"`
-[[nodiscard]] constexpr std::string_view ToString(
-    MatrixLayout layout) noexcept {
-  using enum MatrixLayout;
-  switch (layout) {
-    case ColumnMajor:
-      return "ColumnMajor";
-    case RowMajor:
-      return "RowMajor";
-  }
-  return "Unknown";
-}
-
 /// @brief Behavior when a pipeline is missing from the cache at draw time.
+/// @details `SkipDraw` drops the draw. Querying which draws were skipped is
+/// not part of v1.
 enum class PipelinePolicy : uint8_t { FailOnMiss, SkipDraw, Block };
 
 /// @brief Name of a `PipelinePolicy` enumerator.

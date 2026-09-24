@@ -6,6 +6,7 @@
 #include <aperture/result.hpp>
 #include <aperture/surface.hpp>
 #include <aperture/vulkan/instance.hpp>
+
 #include "internal.hpp"
 
 #include <aperture/vulkan/header.hpp>
@@ -65,7 +66,7 @@ auto CreateSurface(Instance* instance,
           VkXlibSurfaceCreateInfoKHR ci{
               .sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
               .dpy = static_cast<Display*>(spec.display),
-              .window = spec.window,
+              .window = static_cast<Window>(spec.window),
           };
           const VkResult created =
               vkCreateXlibSurfaceKHR(vk_instance, &ci, nullptr, &out);

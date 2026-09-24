@@ -14,11 +14,11 @@ namespace aperture::examples {
 /// @brief Parameters for `Create`. Copied; the call does not retain
 /// references.
 struct WindowDesc {
-  std::string title = "aperture";
   uint32_t width = 1280;
   uint32_t height = 720;
   bool resizable = true;
   bool visible = true;
+  std::string title = "aperture";
 };
 
 /// @brief OS window used by examples. Pointer-sized GLFW handle.

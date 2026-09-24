@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <bit>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
@@ -10,7 +11,11 @@
 #include <cstring>
 #include <expected>
 #include <format>
+#include <limits>
+#include <memory>
 #include <memory_resource>
+#include <new>
+#include <optional>
 #include <source_location>
 #include <span>
 #include <string>

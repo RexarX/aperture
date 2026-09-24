@@ -7,7 +7,7 @@
 namespace aperture {
 
 /// @brief Which work a queue family can submit.
-enum class QueueUsage : uint8_t {
+enum class QueueUsage : uint32_t {
   Graphics = 1U << 0U,
   Compute = 1U << 1U,
   Copy = 1U << 2U,

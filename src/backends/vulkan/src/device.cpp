@@ -8,11 +8,13 @@
 #include <aperture/device.hpp>
 #include <aperture/result.hpp>
 #include <aperture/vulkan/queue.hpp>
+
 #include "internal.hpp"
+#include "memory/storage.hpp"
 
 #include <vk_mem_alloc.h>
-#include <aperture/vulkan/header.hpp>
 #include <volk.h>
+#include <aperture/vulkan/header.hpp>
 
 #include <algorithm>
 #include <array>
@@ -325,10 +327,171 @@ void AddQueueCreateInfo(QueueSelection* queues, uint32_t family) noexcept {
   return {};
 }
 
-void BuildDeviceFeatureChain(DeviceFeatureChain* chain, Capability requested,
-                             const DeviceExtras& extras) noexcept {
+struct ExtrasSplice {
+  static constexpr uint32_t MAX_LINKS = 16;
+
+  struct Link {
+    VkBaseOutStructure* node = nullptr;
+    VkBaseOutStructure* p_next = nullptr;
+  };
+
+  ExtrasSplice() noexcept = default;
+  ExtrasSplice(const ExtrasSplice&) = delete;
+  ExtrasSplice(ExtrasSplice&& other) noexcept
+      : links(other.links), count(other.count) {
+    other.count = 0;
+  }
+  ~ExtrasSplice() noexcept { Restore(); }
+
+  ExtrasSplice& operator=(const ExtrasSplice&) = delete;
+  ExtrasSplice& operator=(ExtrasSplice&& other) noexcept;
+
+  void Restore() noexcept;
+
+  std::array<Link, MAX_LINKS> links = {};
+  uint32_t count = 0;
+};
+
+ExtrasSplice& ExtrasSplice::operator=(ExtrasSplice&& other) noexcept {
+  if (this == &other) [[unlikely]] {
+    return *this;
+  }
+
+  Restore();
+  links = other.links;
+  count = other.count;
+  other.count = 0;
+  return *this;
+}
+
+void ExtrasSplice::Restore() noexcept {
+  while (count > 0) {
+    --count;
+    links[count].node->pNext = links[count].p_next;
+  }
+}
+
+[[nodiscard]] constexpr bool IsOwnedFeatureStruct(
+    VkStructureType type) noexcept {
+  switch (type) {
+    case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES:
+    case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES:
+    case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES:
+    case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES:
+    case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT:
+    case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_FEATURES_EXT:
+    case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT:
+    case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEVICE_ADDRESS_COMMANDS_FEATURES_KHR:
+    case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_UNTYPED_POINTERS_FEATURES_KHR:
+      return true;
+    default:
+      return false;
+  }
+}
+
+void AdoptFeatureStruct(DeviceFeatureChain* chain,
+                        VkBaseOutStructure* node) noexcept {
   APERTURE_ASSERT(chain != nullptr);
-  EnableRequiredFeatures(chain, requested);
+  APERTURE_ASSERT(node != nullptr);
+  switch (node->sType) {
+    case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES: {
+      const auto* src =
+          reinterpret_cast<const VkPhysicalDeviceVulkan11Features*>(node);
+      void* keep = chain->v11.pNext;
+      chain->v11 = *src;
+      chain->v11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+      chain->v11.pNext = keep;
+      break;
+    }
+    case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES: {
+      const auto* src =
+          reinterpret_cast<const VkPhysicalDeviceVulkan12Features*>(node);
+      void* keep = chain->v12.pNext;
+      chain->v12 = *src;
+      chain->v12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+      chain->v12.pNext = keep;
+      break;
+    }
+    case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES: {
+      const auto* src =
+          reinterpret_cast<const VkPhysicalDeviceVulkan13Features*>(node);
+      void* keep = chain->v13.pNext;
+      chain->v13 = *src;
+      chain->v13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+      chain->v13.pNext = keep;
+      break;
+    }
+    case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES: {
+      const auto* src =
+          reinterpret_cast<const VkPhysicalDeviceVulkan14Features*>(node);
+      void* keep = chain->v14.pNext;
+      chain->v14 = *src;
+      chain->v14.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES;
+      chain->v14.pNext = keep;
+      break;
+    }
+    case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT: {
+      const auto* src =
+          reinterpret_cast<const VkPhysicalDeviceRobustness2FeaturesEXT*>(node);
+      void* keep = chain->robustness2.pNext;
+      chain->robustness2 = *src;
+      chain->robustness2.sType =
+          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT;
+      chain->robustness2.pNext = keep;
+      break;
+    }
+    case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_FEATURES_EXT: {
+      const auto* src =
+          reinterpret_cast<const VkPhysicalDeviceDescriptorHeapFeaturesEXT*>(
+              node);
+      void* keep = chain->heap_features.pNext;
+      chain->heap_features = *src;
+      chain->heap_features.sType =
+          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_FEATURES_EXT;
+      chain->heap_features.pNext = keep;
+      break;
+    }
+    case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT: {
+      const auto* src =
+          reinterpret_cast<const VkPhysicalDeviceMeshShaderFeaturesEXT*>(node);
+      void* keep = chain->mesh_features.pNext;
+      chain->mesh_features = *src;
+      chain->mesh_features.sType =
+          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
+      chain->mesh_features.pNext = keep;
+      break;
+    }
+    case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEVICE_ADDRESS_COMMANDS_FEATURES_KHR: {
+      const auto* src = reinterpret_cast<
+          const VkPhysicalDeviceDeviceAddressCommandsFeaturesKHR*>(node);
+      void* keep = chain->address_commands.pNext;
+      chain->address_commands = *src;
+      chain->address_commands.sType =
+          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEVICE_ADDRESS_COMMANDS_FEATURES_KHR;
+      chain->address_commands.pNext = keep;
+      break;
+    }
+    case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_UNTYPED_POINTERS_FEATURES_KHR: {
+      const auto* src = reinterpret_cast<
+          const VkPhysicalDeviceShaderUntypedPointersFeaturesKHR*>(node);
+      void* keep = chain->untyped_pointers.pNext;
+      chain->untyped_pointers = *src;
+      chain->untyped_pointers.sType =
+          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_UNTYPED_POINTERS_FEATURES_KHR;
+      chain->untyped_pointers.pNext = keep;
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+[[nodiscard]] auto BuildDeviceFeatureChain(DeviceFeatureChain* chain,
+                                           Capability requested,
+                                           const DeviceExtras& extras,
+                                           bool log) noexcept
+    -> Result<ExtrasSplice> {
+  APERTURE_ASSERT(chain != nullptr);
 
   chain->v14.pNext = &chain->v13;
   chain->v13.pNext = &chain->v12;
@@ -344,8 +507,6 @@ void BuildDeviceFeatureChain(DeviceFeatureChain* chain, Capability requested,
 
   void** tail = &chain->heap_features.pNext;
   if (HasAll(requested, Capability::MeshShading)) {
-    chain->mesh_features.meshShader = VK_TRUE;
-    chain->mesh_features.taskShader = VK_TRUE;
     *tail = &chain->mesh_features;
     tail = &chain->mesh_features.pNext;
   }
@@ -354,12 +515,44 @@ void BuildDeviceFeatureChain(DeviceFeatureChain* chain, Capability requested,
   *tail = &chain->untyped_pointers;
   tail = &chain->untyped_pointers.pNext;
 
-  void** extras_tail = tail;
+  std::array<VkBaseOutStructure*, ExtrasSplice::MAX_LINKS> unknowns = {};
+  uint32_t unknown_count = 0;
   if (extras.features != nullptr) {
     chain->features2.features = extras.features->features;
-    EnableRequiredFeatures(chain, requested);
-    *extras_tail = extras.features->pNext;
+    auto* node = static_cast<VkBaseOutStructure*>(extras.features->pNext);
+    while (node != nullptr) {
+      VkBaseOutStructure* next = node->pNext;
+      if (IsOwnedFeatureStruct(node->sType)) {
+        AdoptFeatureStruct(chain, node);
+      } else if (unknown_count == unknowns.size()) [[unlikely]] {
+        LogFailed(log, "DeviceExtras feature chain is too long ({})!",
+                  ToString(Error::Invalid));
+        return std::unexpected(Error::Invalid);
+      } else {
+        unknowns[unknown_count++] = node;
+      }
+      node = next;
+    }
   }
+
+  EnableRequiredFeatures(chain, requested);
+  if (HasAll(requested, Capability::MeshShading)) {
+    chain->mesh_features.meshShader = VK_TRUE;
+    chain->mesh_features.taskShader = VK_TRUE;
+  }
+
+  ExtrasSplice splice;
+  for (uint32_t i = 0; i < unknown_count; ++i) {
+    splice.links[i].node = unknowns[i];
+    splice.links[i].p_next = unknowns[i]->pNext;
+    *tail = unknowns[i];
+    tail = reinterpret_cast<void**>(&unknowns[i]->pNext);
+  }
+  if (unknown_count > 0) {
+    unknowns[unknown_count - 1]->pNext = nullptr;
+  }
+  splice.count = unknown_count;
+  return std::move(splice);
 }
 
 [[nodiscard]] auto CreateVmaAllocator(VkInstance instance, VkDevice device,
@@ -371,7 +564,8 @@ void BuildDeviceFeatureChain(DeviceFeatureChain* chain, Capability requested,
   vma_fns.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
   vma_fns.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
   VmaAllocatorCreateInfo vma_ci{};
-  vma_ci.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+  vma_ci.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT |
+                 VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT;
   vma_ci.physicalDevice = physical;
   vma_ci.device = device;
   vma_ci.instance = instance;
@@ -409,9 +603,13 @@ void InitDeviceQueues(Device* device, VkDevice vk_device,
 }
 
 void FillDeviceInfo(Device* device, const aperture::Adapter& info,
-                    const DeviceDesc& desc, uint32_t push_bytes) noexcept {
+                    const DeviceDesc& desc, uint32_t push_bytes,
+                    const Adapter& record,
+                    const QueueSelection& queues) noexcept {
   APERTURE_ASSERT(device != nullptr);
   device->info.profile = AddressingProfile::Pointer;
+  device->info.texture_heap_alignment = info.texture_heap_alignment;
+  device->info.timestamp_period_ns = info.timestamp_period_ns;
   device->info.texture_descriptor_stride = info.texture_descriptor_stride;
   device->info.sampler_descriptor_stride = info.sampler_descriptor_stride;
   device->info.texture_heap_slots = desc.texture_heap_slots;
@@ -419,6 +617,17 @@ void FillDeviceInfo(Device* device, const aperture::Adapter& info,
   device->info.null_texture_slot = 0;
   device->info.null_sampler_slot = 0;
   device->info.max_cpu_root_bytes = push_bytes;
+  device->info.copy_texture_granularity = info.copy_texture_granularity;
+
+  const auto timestamped = [&record](uint32_t family) noexcept {
+    return family < record.queue_families.size() &&
+           record.queue_families[family].timestampValidBits != 0;
+  };
+  device->info.graphics_timestamps = timestamped(queues.graphics_family);
+  device->info.compute_timestamps =
+      queues.want_compute && timestamped(queues.compute_family);
+  device->info.copy_timestamps =
+      queues.want_copy && timestamped(queues.copy_family);
 }
 
 void DestroyPartialDevice(Device* device) noexcept {
@@ -426,6 +635,9 @@ void DestroyPartialDevice(Device* device) noexcept {
     return;
   }
 
+  if (device->memory != nullptr) {
+    DestroyMemory(device);
+  }
   if (device->allocator != VK_NULL_HANDLE) {
     vmaDestroyAllocator(device->allocator);
   }
@@ -474,7 +686,15 @@ auto CreateDevice(Instance* instance, const DeviceDesc& desc,
   }
 
   DeviceFeatureChain chain;
-  BuildDeviceFeatureChain(&chain, desc.capabilities, extras);
+  auto feature_chain =
+      BuildDeviceFeatureChain(&chain, desc.capabilities, extras, log);
+  if (!feature_chain) [[unlikely]] {
+    return std::unexpected(feature_chain.error());
+  }
+  ExtrasSplice splice = std::move(*feature_chain);
+  if (record->features12.bufferDeviceAddressCaptureReplay == VK_TRUE) {
+    chain.v12.bufferDeviceAddressCaptureReplay = VK_TRUE;
+  }
 
   VkDeviceCreateInfo device_ci{
       .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -501,6 +721,8 @@ auto CreateDevice(Instance* instance, const DeviceDesc& desc,
   impl->physical_device = record->physical_device;
   impl->log_failed_results = log;
   impl->enabled = desc.capabilities;
+  impl->capture_replay =
+      record->features12.bufferDeviceAddressCaptureReplay == VK_TRUE;
 
   InitDeviceQueues(impl, vk_device, queues);
 
@@ -512,11 +734,13 @@ auto CreateDevice(Instance* instance, const DeviceDesc& desc,
     LogFailed(log, "vmaCreateAllocator failed!");
     return std::unexpected(allocator.error());
   }
+  InitMemory(impl);
 
-  const auto push_bytes =
-      std::min<uint32_t>(record->descriptor_heap_props.maxPushDataSize, 256);
+  const auto push_bytes = std::min(
+      static_cast<uint32_t>(record->descriptor_heap_props.maxPushDataSize),
+      256U);
 
-  FillDeviceInfo(impl, *info, desc, push_bytes);
+  FillDeviceInfo(impl, *info, desc, push_bytes, *record, queues);
   return impl;
 }
 

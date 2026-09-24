@@ -78,7 +78,7 @@ if(PROJECT_IS_TOP_LEVEL)
   endif()
 endif()
 
-option(APERTURE_BUILD_C_BINDINGS "Build C bindings" OFF)
+option(APERTURE_BUILD_C_BINDINGS "Build C bindings" ${PROJECT_IS_TOP_LEVEL})
 option(APERTURE_BUILD_EXAMPLES "Build examples" ${PROJECT_IS_TOP_LEVEL})
 option(APERTURE_BUILD_SHARED "Build aperture as a shared library" OFF)
 if(APPLE)
@@ -86,7 +86,10 @@ if(APPLE)
 else()
   option(APERTURE_ENABLE_VULKAN "Compile the Vulkan backend" ON)
 endif()
-option(APERTURE_ENABLE_VALIDATION_SUPPORT "Enable Vulkan validation layers" ON)
+option(APERTURE_ENABLE_VALIDATION_SUPPORT
+    "Compile validation support (opt in at runtime via InstanceDesc::enable_validation)"
+    ON
+)
 option(APERTURE_ENABLE_CPU_ROOT_EXTENSION "Enable cpu root extension" ON)
 option(APERTURE_ENABLE_IMGUI_EXTENSION "Enable imgui extension" OFF)
 option(APERTURE_DEVELOPER_MODE "Enable developer-focused build features (sanitizers)" OFF)
@@ -102,9 +105,6 @@ option(APERTURE_MANAGE_TOOLCHAIN
 
 set(APERTURE_MIN_VULKAN_SDK_VERSION "1.4.357" CACHE STRING
     "Minimum Vulkan SDK / Vulkan-Headers version"
-)
-set(APERTURE_SLANG_VERSION "2026.16.1" CACHE STRING
-    "Slang version to fetch from GitHub releases if not found via find_package"
 )
 set(APERTURE_VULKAN_HEADERS_VERSION "1.4.357" CACHE STRING
     "Vulkan-Headers version fetched via CPM when the SDK / find_package is unused"
@@ -132,10 +132,6 @@ option(APERTURE_USE_SYSTEM_VMA
     "Require VulkanMemoryAllocator from find_package"
     OFF
 )
-option(APERTURE_USE_SYSTEM_SLANG
-    "Require slang from find_package"
-    OFF
-)
 option(APERTURE_USE_SYSTEM_GLFW
     "Require glfw3 from find_package"
     OFF
@@ -157,12 +153,6 @@ cmake_dependent_option(APERTURE_USE_VULKAN_SDK_VMA
     "Use VMA from the Vulkan SDK"
     ON
     "APERTURE_USE_VULKAN_SDK;NOT APERTURE_USE_SYSTEM_VMA"
-    OFF
-)
-cmake_dependent_option(APERTURE_USE_VULKAN_SDK_SLANG
-    "Use Slang from the Vulkan SDK"
-    ON
-    "APERTURE_USE_VULKAN_SDK;NOT APERTURE_USE_SYSTEM_SLANG"
     OFF
 )
 
@@ -205,7 +195,6 @@ endif()
 
 include(Sanitizers)
 include(TargetUtils)
-include(SlangRuntime)
 
 aperture_apply_linker()
 aperture_print_sanitizer_status()
@@ -232,10 +221,8 @@ endif()
 include(CPM)
 message(STATUS "CPM source cache: ${CPM_SOURCE_CACHE}")
 
-add_subdirectory(third-party)
-
 # Locate the Vulkan SDK when allowed. Individual packages (headers, volk,
-# VMA, Slang) decide whether to use it via APERTURE_USE_VULKAN_SDK_*.
+# VMA) decide whether to use it via APERTURE_USE_VULKAN_SDK_*.
 include(VulkanSDK)
 
 if(APERTURE_ENABLE_VULKAN)
@@ -244,11 +231,7 @@ if(APERTURE_ENABLE_VULKAN)
   include(Vma)
 endif()
 
-# Slang: SDK / find_package / CPM-fetched GitHub release.
-# Creates aperture::lib::slang.
-include(Slang)
-aperture_setup_slang()
-
+add_subdirectory(third-party)
 add_subdirectory(src)
 
 if(APERTURE_BUILD_EXAMPLES)

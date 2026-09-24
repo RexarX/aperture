@@ -4,6 +4,7 @@
 #include <aperture/platform.hpp>
 #include <aperture/result.hpp>
 #include <aperture/types.hpp>
+#include <aperture/version.hpp>
 
 #include <span>
 
@@ -27,10 +28,22 @@ struct Instance {
 
 /// @brief Parameters for `CreateInstance`. Copied; the call does not retain
 /// references.
+/// @details `header_version` defaults to `HeaderVersion()` evaluated in the
+/// caller's translation unit. Against a shared library this catches header /
+/// DLL major–minor mismatches (`Error::VersionMismatch`).
+///
+/// Validation: `APERTURE_ENABLE_VALIDATION_SUPPORT` only compiles the
+/// machinery in. Set `enable_validation` to turn it on for this instance.
+/// When support was not compiled, `enable_validation == true` fails with
+/// `Error::Unsupported`.
 struct InstanceDesc {
+  /// Headers this TU was compiled against (`HeaderVersion()` at the call site)
+  Version header_version = HeaderVersion();
   /// Log recoverable failures through `aperture::log`
   bool log_failed_results = true;
-  /// Treat validation errors as fatal when a validation layer is on
+  /// Enable validation (layers / messengers) when support was compiled in
+  bool enable_validation = false;
+  /// Abort on validation errors when validation is enabled
   bool validation_fatal = true;
 };
 
@@ -63,7 +76,10 @@ struct InstanceDesc {
 /// @brief Creates an instance using `PreferredBackend()`.
 /// @details `desc` is copied. There is no fallback across backends.
 /// @param desc Instance creation parameters
-/// @return The instance, or `Error::Unsupported` if no backend is available
+/// @return The instance, `Error::VersionMismatch` if `desc.header_version` is
+/// incompatible with the linked binary, `Error::Unsupported` if no backend is
+/// available or validation was requested without compiled support / without a
+/// layer, or another recoverable `Error` from the backend
 /// @warning No fallback: a missing backend is a hard failure.
 [[nodiscard]] APERTURE_API auto CreateInstance(
     const InstanceDesc& desc) noexcept -> Result<Instance>;
@@ -71,7 +87,10 @@ struct InstanceDesc {
 /// @brief Creates an instance for an explicit backend. No fallback.
 /// @param backend Backend to create. Must be in `AvailableBackends()`
 /// @param desc Instance creation parameters
-/// @return The instance, or `Error::Unsupported` if `backend` is unavailable
+/// @return The instance, `Error::VersionMismatch` if `desc.header_version` is
+/// incompatible with the linked binary, `Error::Unsupported` if `backend` is
+/// unavailable or validation was requested without compiled support / without
+/// a layer, or another recoverable `Error` from the backend
 [[nodiscard]] APERTURE_API auto CreateInstance(
     Backend backend, const InstanceDesc& desc) noexcept -> Result<Instance>;
 

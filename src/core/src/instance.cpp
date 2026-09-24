@@ -6,6 +6,7 @@
 #include <aperture/log.hpp>
 #include <aperture/result.hpp>
 #include <aperture/types.hpp>
+#include <aperture/version.hpp>
 
 #ifdef APERTURE_HAS_VULKAN
 #include <aperture/vulkan/instance.hpp>
@@ -66,6 +67,19 @@ auto CreateInstance(const InstanceDesc& desc) noexcept -> Result<Instance> {
 
 auto CreateInstance(Backend backend, const InstanceDesc& desc) noexcept
     -> Result<Instance> {
+  const Version linked = LinkedVersion();
+  if (!Compatible(desc.header_version, linked)) [[unlikely]] {
+    if (desc.log_failed_results) {
+      log::Error(
+          "Header version {}.{}.{} incompatible with linked {}.{}.{} "
+          "({})!",
+          desc.header_version.major, desc.header_version.minor,
+          desc.header_version.patch, linked.major, linked.minor, linked.patch,
+          ToString(Error::VersionMismatch));
+    }
+    return std::unexpected(Error::VersionMismatch);
+  }
+
   if (!Available(backend)) [[unlikely]] {
     if (desc.log_failed_results) {
       log::Error("Backend '{}' is not available on this platform ({})!",
@@ -97,7 +111,7 @@ auto CreateInstance(Backend backend, const InstanceDesc& desc) noexcept
 }
 
 void Destroy(Instance instance) noexcept {
-  if (!instance) {
+  if (!instance) [[unlikely]] {
     return;
   }
 
@@ -118,6 +132,7 @@ void Destroy(Instance instance) noexcept {
 
 auto Adapters(Instance instance) noexcept -> std::span<const Adapter> {
   APERTURE_ASSERT(instance.ptr != nullptr);
+
   switch (BackendOf(instance)) {
     using enum Backend;
 #ifdef APERTURE_HAS_VULKAN

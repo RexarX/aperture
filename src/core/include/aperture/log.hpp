@@ -53,6 +53,10 @@ APERTURE_API void ResetCustomLogger() noexcept;
 /// @return `true` if a custom logger is installed, `false` otherwise
 [[nodiscard]] APERTURE_API bool HasCustomLogger() noexcept;
 
+/// @brief Gets the current custom logger.
+/// @return The current custom logger, or `nullptr` if using built-in output
+[[nodiscard]] APERTURE_API Callback GetCustomLogger() noexcept;
+
 /// @brief Dispatches a pre-formatted message to the active logger.
 /// @param level The severity level of the log message
 /// @param message The pre-formatted log message

@@ -7,8 +7,8 @@
 #include <aperture/vulkan/instance.hpp>
 #include <aperture/vulkan/queue.hpp>
 
-#include <aperture/vulkan/header.hpp>
 #include <volk.h>
+#include <aperture/vulkan/header.hpp>
 
 #include <cstddef>
 #include <cstdint>
@@ -171,6 +171,7 @@ inline void AppendSurfaceInstanceExtensions(
     std::span<const VkExtensionProperties> available,
     Vector* extensions) noexcept {
   APERTURE_ASSERT(extensions != nullptr);
+
   for (const char* name : SURFACE_INSTANCE_EXTENSIONS) {
     if (HasExtension(available, name)) {
       extensions->push_back(name);
@@ -204,6 +205,7 @@ template <typename Vector, typename Query>
 [[nodiscard]] auto EnumerateVk(Vector* out, Query&& query) noexcept
     -> Result<void> {
   APERTURE_ASSERT(out != nullptr);
+
   out->clear();
   while (true) {
     uint32_t count = 0;

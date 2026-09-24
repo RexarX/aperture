@@ -17,6 +17,7 @@ VK_DEFINE_HANDLE(VmaAllocator)
 namespace aperture::vk {
 
 struct Instance;
+struct MemoryState;
 
 /// @brief Additive device extensions and a `pNext` feature chain.
 struct DeviceExtras {
@@ -32,12 +33,14 @@ struct Device {
   bool has_compute = false;
   bool has_copy = false;
   bool log_failed_results = true;
+  bool capture_replay = false;
   Capability enabled = Capability::None;
   Instance* parent = nullptr;
   VkInstance instance = VK_NULL_HANDLE;
   VkDevice device = VK_NULL_HANDLE;
   VkPhysicalDevice physical_device = VK_NULL_HANDLE;
   VmaAllocator allocator = VK_NULL_HANDLE;
+  MemoryState* memory = nullptr;
   Queue graphics;
   Queue compute;
   Queue copy;

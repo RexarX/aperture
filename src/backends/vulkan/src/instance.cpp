@@ -50,10 +50,12 @@ constexpr const char* VK_VALIDATION_LAYER = "VK_LAYER_KHRONOS_validation";
 VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT severity,
     VkDebugUtilsMessageTypeFlagsEXT /*types*/,
-    const VkDebugUtilsMessengerCallbackDataEXT* data, void* /*user*/) noexcept {
+    const VkDebugUtilsMessengerCallbackDataEXT* data, void* user) noexcept {
   const char* message =
       (data != nullptr && data->pMessage != nullptr) ? data->pMessage : "";
-  if ((severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0) {
+  const bool is_error =
+      (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0;
+  if (is_error) {
     log::Error(message);
   } else if ((severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) !=
              0) {
@@ -62,6 +64,11 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     log::Info(message);
   } else {
     log::Debug(message);
+  }
+
+  auto* impl = static_cast<Instance*>(user);
+  if (is_error && impl != nullptr && impl->validation_fatal) {
+    APERTURE_VERIFY(false, "{}", message);
   }
   return VK_FALSE;
 }
@@ -509,6 +516,58 @@ void WireAdapterChains(Adapter* record) noexcept {
     info->max_sampler_heap_slots = 1024;
   }
 
+  const VkPhysicalDeviceLimits& limits = record->properties.properties.limits;
+  info->timestamp_period_ns = limits.timestampPeriod;
+  const VkQueueFamilyProperties* copy_family = nullptr;
+  const VkQueueFamilyProperties* graphics_family = nullptr;
+  for (const VkQueueFamilyProperties& family : record->queue_families) {
+    const VkQueueFlags flags = family.queueFlags;
+    if (copy_family == nullptr && (flags & VK_QUEUE_TRANSFER_BIT) != 0 &&
+        (flags & VK_QUEUE_GRAPHICS_BIT) == 0 &&
+        (flags & VK_QUEUE_COMPUTE_BIT) == 0) {
+      copy_family = &family;
+    }
+    if (graphics_family == nullptr && (flags & VK_QUEUE_GRAPHICS_BIT) != 0) {
+      graphics_family = &family;
+    }
+  }
+  const VkQueueFamilyProperties* transfer =
+      copy_family != nullptr ? copy_family : graphics_family;
+  if (transfer != nullptr) {
+    info->copy_texture_granularity = {
+        .x = transfer->minImageTransferGranularity.width,
+        .y = transfer->minImageTransferGranularity.height,
+        .z = transfer->minImageTransferGranularity.depth,
+    };
+  }
+  uint64_t quantum = limits.bufferImageGranularity;
+  if (quantum < 16) {
+    quantum = 16;
+  }
+  if (!std::has_single_bit(quantum)) {
+    quantum = std::bit_ceil(quantum);
+  }
+  info->texture_heap_alignment = quantum;
+
+  for (const VkQueueFamilyProperties& family : record->queue_families) {
+    if (family.timestampValidBits == 0) {
+      continue;
+    }
+    const VkQueueFlags flags = family.queueFlags;
+    if ((flags & VK_QUEUE_GRAPHICS_BIT) != 0) {
+      info->graphics_timestamps = true;
+    }
+    if ((flags & VK_QUEUE_COMPUTE_BIT) != 0 &&
+        (flags & VK_QUEUE_GRAPHICS_BIT) == 0) {
+      info->compute_timestamps = true;
+    }
+    if ((flags & VK_QUEUE_TRANSFER_BIT) != 0 &&
+        (flags & VK_QUEUE_GRAPHICS_BIT) == 0 &&
+        (flags & VK_QUEUE_COMPUTE_BIT) == 0) {
+      info->copy_timestamps = true;
+    }
+  }
+
   info->capabilities = ProbeCapabilities(*record);
   return {};
 }
@@ -518,13 +577,21 @@ void WireAdapterChains(Adapter* record) noexcept {
     std::span<const VkLayerProperties> available,
     std::pmr::vector<const char*>* layers) noexcept -> Result<void> {
   APERTURE_ASSERT(layers != nullptr);
-#ifdef APERTURE_ENABLE_VALIDATION
-  if (HasLayer(available, VK_VALIDATION_LAYER)) {
-    layers->push_back(VK_VALIDATION_LAYER);
-  } else {
-    log::Warn("Vulkan validation layer is not available!");
-  }
+  if (desc.enable_validation) {
+#ifdef APERTURE_ENABLE_VALIDATION_SUPPORT
+    if (HasLayer(available, VK_VALIDATION_LAYER)) {
+      layers->push_back(VK_VALIDATION_LAYER);
+    } else {
+      LogFailed(desc.log_failed_results,
+                "Vulkan validation layer is not available!");
+      return std::unexpected(Error::Unsupported);
+    }
+#else
+    LogFailed(desc.log_failed_results,
+              "Validation support was not compiled into this build!");
+    return std::unexpected(Error::Unsupported);
 #endif
+  }
 
   for (const char* layer : extras.layers) {
     if (!HasLayer(available, layer)) [[unlikely]] {
@@ -562,8 +629,14 @@ void WireAdapterChains(Adapter* record) noexcept {
 }
 
 void CreateDebugMessenger(
-    Instance* impl, std::span<const VkExtensionProperties> available) noexcept {
+    [[maybe_unused]] Instance* impl,
+    [[maybe_unused]] std::span<const VkExtensionProperties> available,
+    [[maybe_unused]] bool enable_validation) noexcept {
   APERTURE_ASSERT(impl != nullptr);
+#ifdef APERTURE_ENABLE_VALIDATION_SUPPORT
+  if (!enable_validation) {
+    return;
+  }
   if (!HasExtension(available, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) ||
       vkCreateDebugUtilsMessengerEXT == nullptr) {
     return;
@@ -578,9 +651,11 @@ void CreateDebugMessenger(
                      VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                      VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
       .pfnUserCallback = DebugCallback,
+      .pUserData = impl,
   };
   vkCreateDebugUtilsMessengerEXT(impl->instance, &msg_ci, nullptr,
                                  &impl->messenger);
+#endif
 }
 
 [[nodiscard]] auto EnumerateAdapters(
@@ -699,7 +774,7 @@ auto CreateInstance(const InstanceDesc& desc,
   impl->instance = vk_instance;
   impl->log_failed_results = desc.log_failed_results;
   impl->validation_fatal = desc.validation_fatal;
-  CreateDebugMessenger(impl, enumeration->extensions);
+  CreateDebugMessenger(impl, enumeration->extensions, desc.enable_validation);
   if (auto enumerated = EnumerateAdapters(impl, &scratch.resource); !enumerated)
       [[unlikely]] {
     LogFailed(desc.log_failed_results, "Failed to enumerate adapters: {}!",

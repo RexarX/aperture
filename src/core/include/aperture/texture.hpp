@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstddef>
 #include <cstdint>
 #include <string_view>
 #include <utility>
@@ -8,63 +7,54 @@
 namespace aperture {
 
 /// @brief Shader-visible texture heap index. Slot 0 is the reserved null view.
-enum class TextureHandle : uint8_t { Null = 0 };
+enum class TextureSlot : uint32_t { Null = 0 };
 
-/// @brief Name of a `TextureHandle` enumerator.
-/// @param handle Enumerator to convert
-/// @return Enumerator name, or `"Unknown"`
-[[nodiscard]] constexpr std::string_view ToString(
-    TextureHandle handle) noexcept {
-  switch (handle) {
-    using enum TextureHandle;
+/// @brief Name of a `TextureSlot` enumerator.
+/// @param slot Exact enumerator. Issued indices other than `Null` return
+/// `"Slot"`.
+/// @return Enumerator name, or `"Slot"`
+[[nodiscard]] constexpr std::string_view ToString(TextureSlot slot) noexcept {
+  switch (slot) {
+    using enum TextureSlot;
     case Null:
       return "Null";
   }
-  return "Unknown";
+  return "Slot";
 }
 
-/// @brief Shader-visible sampler heap index. Slot 0 is reserved.
-enum class SamplerHandle : uint8_t { Null = 0 };
+/// @brief Shader-visible sampler heap index.
+/// @details `Null` through `ShadowCompare` are device-lifetime samplers.
+/// `AllocSamplerSlot` starts at `FirstUser`.
+enum class SamplerSlot : uint32_t {
+  Null = 0,
+  PointClamp,
+  PointWrap,
+  LinearClamp,
+  LinearWrap,
+  ShadowCompare,
+  FirstUser,
+};
 
-/// @brief Name of a `SamplerHandle` enumerator.
-/// @param handle Enumerator to convert
-/// @return Enumerator name, or `"Unknown"`
-[[nodiscard]] constexpr std::string_view ToString(
-    SamplerHandle handle) noexcept {
-  switch (handle) {
-    using enum SamplerHandle;
-    case Null:
-      return "Null";
-  }
-  return "Unknown";
-}
+/// @brief Name of a `SamplerSlot` enumerator.
+/// @param slot Exact enumerator. Indices at or above `FirstUser` return
+/// `"Slot"`.
+/// @return Enumerator name, or `"Slot"`
+[[nodiscard]] constexpr std::string_view ToString(SamplerSlot slot) noexcept;
 
-/// @brief Maximum size of an opaque descriptor blob, in bytes.
-inline constexpr uint32_t MAX_DESCRIPTOR_BYTES = 64;
-
-/// @brief Opaque descriptor blob. `size` equals the heap stride.
-struct Descriptor {
-  alignas(8) std::byte data[MAX_DESCRIPTOR_BYTES] = {};
-  uint8_t size = 0;
+/// @brief Placement requirement for a texture's backing memory.
+/// @details `heap` is an opaque tag consumed by the image-heap `MallocGpu`
+/// overload. `align` divides `Info(device).texture_heap_alignment`.
+struct SizeAlign {
+  uint64_t size = 0;
+  uint64_t align = 0;
+  uint32_t heap = 0;
 };
 
 /// @brief CPU handle for a texture object. `Invalid` is never a live texture.
 enum class Texture : uint8_t { Invalid = 0 };
 
-/// @brief Name of a `Texture` enumerator.
-/// @param texture Enumerator to convert
-/// @return Enumerator name, or `"Unknown"`
-[[nodiscard]] constexpr std::string_view ToString(Texture texture) noexcept {
-  switch (texture) {
-    using enum Texture;
-    case Invalid:
-      return "Invalid";
-  }
-  return "Unknown";
-}
-
 /// @brief Creation / barrier usage mask for a texture.
-enum class TextureUsage : uint8_t {
+enum class TextureUsage : uint32_t {
   Sampled = 1U << 0U,
   Storage = 1U << 1U,
   Color = 1U << 2U,
@@ -241,6 +231,27 @@ enum class Load : uint8_t { Load, Clear, DontCare };
       return "DontCare";
   }
   return "Unknown";
+}
+
+inline constexpr std::string_view ToString(SamplerSlot slot) noexcept {
+  switch (slot) {
+    using enum SamplerSlot;
+    case Null:
+      return "Null";
+    case PointClamp:
+      return "PointClamp";
+    case PointWrap:
+      return "PointWrap";
+    case LinearClamp:
+      return "LinearClamp";
+    case LinearWrap:
+      return "LinearWrap";
+    case ShadowCompare:
+      return "ShadowCompare";
+    case FirstUser:
+      return "FirstUser";
+  }
+  return "Slot";
 }
 
 }  // namespace aperture

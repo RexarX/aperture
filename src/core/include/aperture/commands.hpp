@@ -23,24 +23,6 @@ enum class Memory : uint8_t { Default, Readback };
   return "Unknown";
 }
 
-/// @brief Behavior when an arena runs out of space.
-enum class ArenaOverflow : uint8_t { Fail, Grow };
-
-/// @brief Name of an `ArenaOverflow` enumerator.
-/// @param overflow Enumerator to convert
-/// @return Enumerator name, or `"Unknown"`
-[[nodiscard]] constexpr std::string_view ToString(
-    ArenaOverflow overflow) noexcept {
-  switch (overflow) {
-    using enum ArenaOverflow;
-    case Fail:
-      return "Fail";
-    case Grow:
-      return "Grow";
-  }
-  return "Unknown";
-}
-
 /// @brief Index buffer element type.
 enum class IndexType : uint8_t { U16, U32 };
 
@@ -143,7 +125,7 @@ constexpr Stage& operator&=(Stage& lhs, Stage rhs) noexcept {
 }
 
 /// @brief Extra hazard bits that are not implied by `Stage` alone.
-enum class Hazard : uint8_t {
+enum class Hazard : uint32_t {
   None = 0,
   DrawArguments = 1U << 0U,
   Descriptors = 1U << 1U,
@@ -201,6 +183,13 @@ constexpr Hazard& operator&=(Hazard& lhs, Hazard rhs) noexcept {
   return (set & bits) == bits;
 }
 
+/// @brief Parameters for `CreateCommandPool`.
+/// @details `max_timestamps` is the number of `WriteTimestamp` calls one
+/// buffer from the pool may record. Zero disables timestamps.
+struct CommandPoolDesc {
+  uint32_t max_timestamps = 0;
+};
+
 /// @brief Pool that allocates command buffers. Pointer-sized CPU handle.
 struct CommandPool {
   void* ptr = nullptr;
@@ -214,22 +203,6 @@ struct CommandPool {
   [[nodiscard]] constexpr bool operator==(const CommandPool&) const noexcept =
       default;
   [[nodiscard]] constexpr bool operator!=(const CommandPool&) const noexcept =
-      default;
-};
-
-/// @brief Bump allocator for transient GPU memory. Pointer-sized CPU handle.
-struct Arena {
-  void* ptr = nullptr;
-
-  /// @brief True if this handle is non-null.
-  /// @return `true` when `ptr != nullptr`
-  [[nodiscard]] constexpr explicit operator bool() const noexcept {
-    return ptr != nullptr;
-  }
-
-  [[nodiscard]] constexpr bool operator==(const Arena&) const noexcept =
-      default;
-  [[nodiscard]] constexpr bool operator!=(const Arena&) const noexcept =
       default;
 };
 

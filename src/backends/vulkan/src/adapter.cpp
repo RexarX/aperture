@@ -7,12 +7,12 @@
 #include <aperture/platform.hpp>
 #include <aperture/surface.hpp>
 #include <aperture/swapchain.hpp>
-#include "internal.hpp"
-
 #include <aperture/vulkan/format.hpp>
 #include <aperture/vulkan/instance.hpp>
 #include <aperture/vulkan/surface.hpp>
 #include <aperture/vulkan/swapchain.hpp>
+
+#include "internal.hpp"
 
 #include <aperture/vulkan/header.hpp>
 

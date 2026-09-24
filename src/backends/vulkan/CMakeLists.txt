@@ -2,19 +2,28 @@ aperture_add_backend(
     NAME vulkan
 
     HEADERS
+        include/aperture/vulkan/memory/common.hpp
+        include/aperture/vulkan/memory/free.hpp
+        include/aperture/vulkan/memory/malloc.hpp
         include/aperture/vulkan/adapter.hpp
         include/aperture/vulkan/device.hpp
         include/aperture/vulkan/format.hpp
         include/aperture/vulkan/header.hpp
         include/aperture/vulkan/instance.hpp
+        include/aperture/vulkan/memory.hpp
         include/aperture/vulkan/queue.hpp
         include/aperture/vulkan/surface.hpp
         include/aperture/vulkan/swapchain.hpp
         include/aperture/vulkan/x11_undef.hpp
         include/aperture/vulkan.hpp
+        src/memory/storage.hpp
         src/internal.hpp
 
     SOURCES
+        src/memory/common.cpp
+        src/memory/free.cpp
+        src/memory/malloc.cpp
+        src/memory/storage.cpp
         src/adapter.cpp
         src/device.cpp
         src/instance.cpp
@@ -28,9 +37,10 @@ aperture_add_backend(
         aperture::lib::vma
 )
 
-if(APERTURE_ENABLE_VALIDATION_SUPPORT)
-  target_compile_definitions(aperture_vulkan PUBLIC APERTURE_ENABLE_VALIDATION)
-endif()
+target_link_libraries(aperture_vulkan PRIVATE
+    $<BUILD_INTERFACE:aperture::lib::unordered_dense>
+)
+
 if(XLIB_HEADERS)
   target_compile_definitions(aperture_vulkan PUBLIC APERTURE_ENABLE_XLIB)
 endif()

@@ -1,4 +1,10 @@
 set(APERTURE_CORE_HEADERS
+    include/aperture/memory/bump_allocator.hpp
+    include/aperture/memory/common.hpp
+    include/aperture/memory/free.hpp
+    include/aperture/memory/malloc.hpp
+    include/aperture/memory/offset_allocator.hpp
+    include/aperture/utils/bit.hpp
     include/aperture/utils/defer.hpp
     include/aperture/utils/format.hpp
     include/aperture/utils/macro.hpp
@@ -13,6 +19,7 @@ set(APERTURE_CORE_HEADERS
     include/aperture/instance.hpp
     include/aperture/log.hpp
     include/aperture/math.hpp
+    include/aperture/memory.hpp
     include/aperture/pipeline.hpp
     include/aperture/platform.hpp
     include/aperture/queue.hpp
@@ -22,24 +29,41 @@ set(APERTURE_CORE_HEADERS
     include/aperture/sync.hpp
     include/aperture/texture.hpp
     include/aperture/types.hpp
+    include/aperture/version.hpp
+    include/aperture/version_macros.h.in
 )
 
 set(APERTURE_CORE_SOURCES
+    src/memory/bump_allocator.cpp
+    src/memory/common.cpp
+    src/memory/free.cpp
+    src/memory/malloc.cpp
+    src/memory/offset_allocator.cpp
     src/adapter.cpp
     src/assert.cpp
     src/device.cpp
     src/instance.cpp
     src/log.cpp
     src/queue.cpp
+    src/version.cpp
     src/pch.hpp
+)
+
+set(APERTURE_CORE_GENERATED_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/aperture/version_macros.h.in"
+    "${APERTURE_CORE_GENERATED_INCLUDE_DIR}/aperture/version_macros.h"
+    @ONLY
 )
 
 set(APERTURE_CORE_FILES
     ${APERTURE_CORE_HEADERS}
     ${APERTURE_CORE_SOURCES}
+    "${APERTURE_CORE_GENERATED_INCLUDE_DIR}/aperture/version_macros.h"
 )
 
 set(APERTURE_CORE_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include" PARENT_SCOPE)
+set(APERTURE_CORE_GENERATED_INCLUDE_DIR "${APERTURE_CORE_GENERATED_INCLUDE_DIR}" PARENT_SCOPE)
 
 add_library(aperture_core STATIC ${APERTURE_CORE_FILES})
 add_library(aperture::core ALIAS aperture_core)
@@ -58,12 +82,15 @@ aperture_target_add_pch(aperture_core "${CMAKE_CURRENT_SOURCE_DIR}/src/pch.hpp")
 
 target_compile_definitions(aperture_core PUBLIC
     $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:APERTURE_ENABLE_ASSERT>
-    APERTURE_PROJECT_VERSION="${PROJECT_VERSION}"
 )
+if(APERTURE_ENABLE_VALIDATION_SUPPORT)
+  target_compile_definitions(aperture_core PUBLIC APERTURE_ENABLE_VALIDATION_SUPPORT)
+endif()
 
 target_include_directories(aperture_core
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${APERTURE_CORE_GENERATED_INCLUDE_DIR}>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -76,15 +103,13 @@ if(APERTURE_ENABLE_VULKAN)
   )
   target_link_libraries(aperture_core PRIVATE aperture::lib::vulkan_headers)
 endif()
-if(APERTURE_BUILD_SHARED)
-  target_link_libraries(aperture_core PRIVATE aperture::lib::slang)
-else()
-  target_link_libraries(aperture_core PUBLIC $<BUILD_INTERFACE:aperture::lib::slang>)
-endif()
 
 if(APERTURE_ENABLE_INSTALL)
   install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/"
       DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
       FILES_MATCHING PATTERN "*.hpp" PATTERN "*.h" PATTERN "*.inl"
+  )
+  install(FILES "${APERTURE_CORE_GENERATED_INCLUDE_DIR}/aperture/version_macros.h"
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/aperture
   )
 endif()

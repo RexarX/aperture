@@ -5,6 +5,7 @@
 #include <aperture/assert.hpp>
 #include <aperture/result.hpp>
 #include <aperture/vulkan/device.hpp>
+
 #include "internal.hpp"
 
 #include <expected>

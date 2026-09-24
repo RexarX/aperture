@@ -25,6 +25,7 @@ Backend BackendOf(Device device) noexcept {
 auto CreateDevice(Instance instance, const DeviceDesc& desc) noexcept
     -> Result<Device> {
   APERTURE_ASSERT(instance.ptr != nullptr);
+
   switch (BackendOf(instance)) {
     using enum Backend;
 #ifdef APERTURE_HAS_VULKAN
@@ -38,14 +39,14 @@ auto CreateDevice(Instance instance, const DeviceDesc& desc) noexcept
     }
 #endif
     default:
-      log::Error("Unknown instance backend: {} ({})!",
-                 ToString(BackendOf(instance)), ToString(Error::Unsupported));
+      log::Error("Unsupported backend: {} ({})!", ToString(BackendOf(instance)),
+                 ToString(Error::Unsupported));
       return std::unexpected(Error::Unsupported);
   }
 }
 
 void Destroy(Device device) noexcept {
-  if (!device) {
+  if (!device) [[unlikely]] {
     return;
   }
 
@@ -59,13 +60,14 @@ void Destroy(Device device) noexcept {
     }
 #endif
     default:
-      APERTURE_ASSERT(false, "Unknown device backend: {}!",
+      APERTURE_ASSERT(false, "Unsupported backend: {}!",
                       ToString(BackendOf(device)));
   }
 }
 
 bool Has(Device device, Capability caps) noexcept {
   APERTURE_ASSERT(device.ptr != nullptr);
+
   switch (BackendOf(device)) {
     using enum Backend;
 #ifdef APERTURE_HAS_VULKAN
@@ -75,12 +77,15 @@ bool Has(Device device, Capability caps) noexcept {
     }
 #endif
     default:
+      APERTURE_ASSERT(false, "Unsupported backend: {}!",
+                      ToString(BackendOf(device)));
       return false;
   }
 }
 
 const DeviceInfo& Info(Device device) noexcept {
   APERTURE_ASSERT(device.ptr != nullptr);
+
   switch (BackendOf(device)) {
     using enum Backend;
 #ifdef APERTURE_HAS_VULKAN
@@ -90,6 +95,8 @@ const DeviceInfo& Info(Device device) noexcept {
     }
 #endif
     default: {
+      APERTURE_ASSERT(false, "Unsupported backend: {}!",
+                      ToString(BackendOf(device)));
       static const DeviceInfo empty{};
       return empty;
     }

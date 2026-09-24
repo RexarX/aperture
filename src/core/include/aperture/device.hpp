@@ -50,10 +50,10 @@ enum class AddressingProfile : uint8_t { Pointer, Handle };
 /// @brief Parameters for `CreateDevice`. Copied; the call does not retain
 /// references.
 struct DeviceDesc {
+  Capability capabilities = Capability::None;
   uint32_t adapter = 0;
   uint32_t texture_heap_slots = 0;
   uint32_t sampler_heap_slots = 0;
-  Capability capabilities = Capability::None;
   PipelinePolicy pipeline_policy = PipelinePolicy::FailOnMiss;
 };
 
@@ -62,6 +62,10 @@ struct DeviceDesc {
 struct DeviceInfo {
   GpuPtr<std::byte> texture_heap_device;
   GpuPtr<std::byte> sampler_heap_device;
+  /// Power-of-two quantum. Every texture `SizeAlign::align` divides it.
+  uint64_t texture_heap_alignment = 0;
+  /// Nanoseconds per timestamp tick. Zero when timestamps are unsupported.
+  float timestamp_period_ns = 0.0F;
   uint32_t texture_descriptor_stride = 0;
   uint32_t sampler_descriptor_stride = 0;
   uint32_t texture_heap_slots = 0;
@@ -70,7 +74,11 @@ struct DeviceInfo {
   uint32_t null_sampler_slot = 0;
   /// Push-data / CPU-root byte limit (`min(maxPushDataSize, 256)` on Vulkan).
   uint32_t max_cpu_root_bytes = 0;
+  CopyGranularity copy_texture_granularity;
   AddressingProfile profile = AddressingProfile::Pointer;
+  bool graphics_timestamps = false;
+  bool compute_timestamps = false;
+  bool copy_timestamps = false;
 };
 
 /// @brief Native API of this device.

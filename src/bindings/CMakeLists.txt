@@ -1,4 +1,3 @@
 if(APERTURE_BUILD_C_BINDINGS)
   add_subdirectory(c)
-  set(APERTURE_C_INCLUDE_DIR "${APERTURE_C_INCLUDE_DIR}" PARENT_SCOPE)
 endif()

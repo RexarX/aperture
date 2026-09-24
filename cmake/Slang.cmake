@@ -11,6 +11,7 @@
 # Runtime DLLs/SOs still need to sit next to consumers; see SlangRuntime.cmake.
 
 include_guard(GLOBAL)
+include(CMakeDependentOption)
 include(CPM)
 include(PackageResolve)
 include(SlangRuntime)
@@ -20,6 +21,17 @@ if(NOT APERTURE_SLANG_VERSION)
       "Slang version to fetch from GitHub releases if not found via find_package / Vulkan SDK"
   )
 endif()
+
+option(APERTURE_USE_SYSTEM_SLANG
+    "Require slang from find_package (examples only)"
+    OFF
+)
+cmake_dependent_option(APERTURE_USE_VULKAN_SDK_SLANG
+    "Use Slang from the Vulkan SDK (examples only)"
+    ON
+    "APERTURE_USE_VULKAN_SDK;NOT APERTURE_USE_SYSTEM_SLANG"
+    OFF
+)
 
 function(_aperture_slang_map_imported_configs)
   if(NOT TARGET slang::slang)

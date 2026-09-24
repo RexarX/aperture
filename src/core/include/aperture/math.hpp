@@ -15,16 +15,16 @@ template <Numeric T, size_t N>
 struct vector {
   static constexpr size_t COMPONENT_COUNT = N;
 
-  T v[N] = {};
+  T data[N] = {};
 
   [[nodiscard]] constexpr T& operator[](size_t index) noexcept {
     APERTURE_ASSERT(index < N);
-    return v[index];
+    return data[index];
   }
 
   [[nodiscard]] constexpr const T& operator[](size_t index) const noexcept {
     APERTURE_ASSERT(index < N);
-    return v[index];
+    return data[index];
   }
 
   [[nodiscard]] constexpr bool operator==(const vector&) const noexcept =
@@ -39,7 +39,7 @@ struct matrix {
   static constexpr size_t ROW_COUNT = R;
   static constexpr size_t COLUMN_COUNT = C;
 
-  T m[R * C] = {};
+  T data[R * C] = {};
 
   struct ColumnProxy {
     T* col = nullptr;
@@ -66,13 +66,60 @@ struct matrix {
 
   [[nodiscard]] constexpr ColumnProxy operator[](size_t col) noexcept {
     APERTURE_ASSERT(col < C);
-    return {m + (col * R)};
+    return {data + (col * R)};
   }
 
   [[nodiscard]] constexpr ConstColumnProxy operator[](
       size_t col) const noexcept {
     APERTURE_ASSERT(col < C);
-    return {m + (col * R)};
+    return {data + (col * R)};
+  }
+
+  [[nodiscard]] constexpr T& operator[](size_t row, size_t col) noexcept {
+    APERTURE_ASSERT(row < R);
+    APERTURE_ASSERT(col < C);
+    return data[(col * R) + row];
+  }
+
+  [[nodiscard]] constexpr const T& operator[](size_t row,
+                                              size_t col) const noexcept {
+    APERTURE_ASSERT(row < R);
+    APERTURE_ASSERT(col < C);
+    return data[(col * R) + row];
+  }
+
+  constexpr void SetColumn(size_t col, const vector<T, R>& vec) noexcept {
+    APERTURE_ASSERT(col < C);
+    for (size_t row = 0; row < R; ++row) {
+      data[(col * R) + row] = vec[row];
+    }
+  }
+
+  constexpr void SetRow(size_t row, const vector<T, C>& vec) noexcept {
+    APERTURE_ASSERT(row < R);
+    for (size_t col = 0; col < C; ++col) {
+      data[(col * R) + row] = vec[col];
+    }
+  }
+
+  [[nodiscard]] constexpr auto GetColumn(size_t col) const noexcept
+      -> vector<T, R> {
+    APERTURE_ASSERT(col < C);
+    vector<T, R> result;
+    for (size_t row = 0; row < R; ++row) {
+      result[row] = data[(col * R) + row];
+    }
+    return result;
+  }
+
+  [[nodiscard]] constexpr auto GetRow(size_t row) const noexcept
+      -> vector<T, C> {
+    APERTURE_ASSERT(row < R);
+    vector<T, C> result;
+    for (size_t col = 0; col < C; ++col) {
+      result[col] = data[(col * R) + row];
+    }
+    return result;
   }
 
   [[nodiscard]] constexpr bool operator==(const matrix&) const noexcept =
@@ -81,34 +128,32 @@ struct matrix {
       default;
 };
 
-using int2 = vector<int32_t, 2>;
-using int3 = vector<int32_t, 3>;
-using int4 = vector<int32_t, 4>;
+#define APERTURE_VECTOR_ALIASES(T, name) \
+  using name##2 = vector<T, 2>;          \
+  using name##3 = vector<T, 3>;          \
+  using name##4 = vector<T, 4>;
 
-using uint2 = vector<uint32_t, 2>;
-using uint3 = vector<uint32_t, 3>;
-using uint4 = vector<uint32_t, 4>;
+APERTURE_VECTOR_ALIASES(int32_t, int)
+APERTURE_VECTOR_ALIASES(uint32_t, uint)
+APERTURE_VECTOR_ALIASES(float, float)
 
-using float2 = vector<float, 2>;
-using float3 = vector<float, 3>;
-using float4 = vector<float, 4>;
+#undef APERTURE_VECTOR_ALIASES
 
-using int2x2 = matrix<int32_t, 2, 2>;
-using int3x3 = matrix<int32_t, 3, 3>;
-using int3x4 = matrix<int32_t, 3, 4>;
-using int4x3 = matrix<int32_t, 4, 3>;
-using int4x4 = matrix<int32_t, 4, 4>;
+#define APERTURE_MATRIX_ALIASES(T, name) \
+  using name##2x2 = matrix<T, 2, 2>;     \
+  using name##2x3 = matrix<T, 2, 3>;     \
+  using name##2x4 = matrix<T, 2, 4>;     \
+  using name##3x2 = matrix<T, 3, 2>;     \
+  using name##3x3 = matrix<T, 3, 3>;     \
+  using name##3x4 = matrix<T, 3, 4>;     \
+  using name##4x2 = matrix<T, 4, 2>;     \
+  using name##4x3 = matrix<T, 4, 3>;     \
+  using name##4x4 = matrix<T, 4, 4>;
 
-using uint2x2 = matrix<uint32_t, 2, 2>;
-using uint3x3 = matrix<uint32_t, 3, 3>;
-using uint3x4 = matrix<uint32_t, 3, 4>;
-using uint4x3 = matrix<uint32_t, 4, 3>;
-using uint4x4 = matrix<uint32_t, 4, 4>;
+APERTURE_MATRIX_ALIASES(int32_t, int)
+APERTURE_MATRIX_ALIASES(uint32_t, uint)
+APERTURE_MATRIX_ALIASES(float, float)
 
-using float2x2 = matrix<float, 2, 2>;
-using float3x3 = matrix<float, 3, 3>;
-using float3x4 = matrix<float, 3, 4>;
-using float4x3 = matrix<float, 4, 3>;
-using float4x4 = matrix<float, 4, 4>;
+#undef APERTURE_MATRIX_ALIASES
 
 }  // namespace aperture

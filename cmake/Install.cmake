@@ -5,99 +5,95 @@
 # `aperture::aperture` is the glue over every enabled module (core,
 # backends, extensions, and C bindings when APERTURE_BUILD_C_BINDINGS).
 # Shared builds produce one DLL; static builds keep separate archives and
-# the glue is INTERFACE. C consumers of the glue get C headers only.
-# slang-compiler still ships beside bin/ because Slang is a shared library.
-# Consumers need a Vulkan SDK for headers only when this build used SDK headers.
+# the glue is INTERFACE. C and C++ headers both install under
+# include/aperture/ (*.h vs *.hpp). The glue itself does not use INCLUDES
+# DESTINATION so C++-only third-party includes (Vulkan) stay
+# COMPILE_LANGUAGE-gated. Consumers need a Vulkan SDK for
+# headers only when this build used SDK headers.
 
 include_guard(GLOBAL)
 
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 
-set(_aperture_export_targets aperture aperture_vulkan_headers)
-if(NOT APERTURE_BUILD_SHARED)
-  list(APPEND _aperture_export_targets aperture_core aperture_volk aperture_vma)
-  if(TARGET aperture_c)
-    list(APPEND _aperture_export_targets aperture_c)
-  endif()
-  get_property(_aperture_backend_targets GLOBAL PROPERTY APERTURE_BACKEND_TARGETS)
-  if(_aperture_backend_targets)
-    list(APPEND _aperture_export_targets ${_aperture_backend_targets})
-  endif()
-  get_property(_aperture_extension_targets GLOBAL PROPERTY APERTURE_EXTENSION_TARGETS)
-  if(_aperture_extension_targets)
-    list(APPEND _aperture_export_targets ${_aperture_extension_targets})
-  endif()
-endif()
-
-install(TARGETS ${_aperture_export_targets}
+install(TARGETS aperture
     EXPORT apertureTargets
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-# --- Slang compiler runtime ----------------------------------------------
-get_target_property(_aperture_slang_loc slang::slang IMPORTED_LOCATION_RELEASE)
-if(NOT _aperture_slang_loc)
-  get_target_property(_aperture_slang_loc slang::slang IMPORTED_LOCATION)
+set(_aperture_export_with_includes)
+if(TARGET aperture_vulkan_headers)
+  list(APPEND _aperture_export_with_includes aperture_vulkan_headers)
 endif()
-get_filename_component(APERTURE_SLANG_SONAME "${_aperture_slang_loc}" NAME)
-file(TO_CMAKE_PATH "${_aperture_slang_loc}" _aperture_slang_loc)
-
-set(APERTURE_SLANG_IMPLIB_NAME "")
-if(WIN32)
-  get_target_property(_aperture_slang_implib slang::slang IMPORTED_IMPLIB_RELEASE)
-  if(NOT _aperture_slang_implib)
-    get_target_property(_aperture_slang_implib slang::slang IMPORTED_IMPLIB)
+if(NOT APERTURE_BUILD_SHARED)
+  list(APPEND _aperture_export_with_includes aperture_core)
+  if(TARGET aperture_volk)
+    list(APPEND _aperture_export_with_includes aperture_volk)
   endif()
-  if(_aperture_slang_implib)
-    get_filename_component(APERTURE_SLANG_IMPLIB_NAME "${_aperture_slang_implib}" NAME)
-    file(TO_CMAKE_PATH "${_aperture_slang_implib}" _aperture_slang_implib)
-    install(FILES "${_aperture_slang_implib}" DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  if(TARGET aperture_vma)
+    list(APPEND _aperture_export_with_includes aperture_vma)
+  endif()
+  get_property(_aperture_backend_targets GLOBAL PROPERTY APERTURE_BACKEND_TARGETS)
+  if(_aperture_backend_targets)
+    list(APPEND _aperture_export_with_includes ${_aperture_backend_targets})
+  endif()
+  get_property(_aperture_extension_targets GLOBAL PROPERTY APERTURE_EXTENSION_TARGETS)
+  if(_aperture_extension_targets)
+    list(APPEND _aperture_export_with_includes ${_aperture_extension_targets})
   endif()
 endif()
 
-if(WIN32)
-  set(APERTURE_SLANG_RUNTIME_SUBDIR "${CMAKE_INSTALL_BINDIR}")
-else()
-  set(APERTURE_SLANG_RUNTIME_SUBDIR "${CMAKE_INSTALL_LIBDIR}")
-endif()
-
-install(FILES "${_aperture_slang_loc}" DESTINATION ${APERTURE_SLANG_RUNTIME_SUBDIR})
-
-get_target_property(_aperture_slang_incs slang::slang INTERFACE_INCLUDE_DIRECTORIES)
-if(_aperture_slang_incs)
-  foreach(_inc IN LISTS _aperture_slang_incs)
-    file(TO_CMAKE_PATH "${_inc}" _inc)
-    if(EXISTS "${_inc}/slang.h")
-      install(FILES "${_inc}/slang.h" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-    endif()
-    if(EXISTS "${_inc}/slang" AND IS_DIRECTORY "${_inc}/slang")
-      install(DIRECTORY "${_inc}/slang/"
-          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/slang"
-          FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp"
-      )
-    endif()
-  endforeach()
-endif()
-
-# --- volk / VMA headers (so installed Vulkan-backend consumers can compile)
-if(EXISTS "${APERTURE_VOLK_INCLUDE_DIR}/volk.h")
-  install(FILES "${APERTURE_VOLK_INCLUDE_DIR}/volk.h"
-      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+if(_aperture_export_with_includes)
+  install(TARGETS ${_aperture_export_with_includes}
+      EXPORT apertureTargets
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   )
-  if(EXISTS "${APERTURE_VOLK_INCLUDE_DIR}/volk.c")
-    install(FILES "${APERTURE_VOLK_INCLUDE_DIR}/volk.c"
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+endif()
+
+if(NOT APERTURE_BUILD_SHARED)
+  get_property(_aperture_c_targets GLOBAL PROPERTY APERTURE_C_TARGETS)
+  if(_aperture_c_targets)
+    install(TARGETS ${_aperture_c_targets}
+        EXPORT apertureTargets
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     )
   endif()
 endif()
-if(EXISTS "${APERTURE_VMA_INCLUDE_DIR}/vk_mem_alloc.h")
-  install(FILES "${APERTURE_VMA_INCLUDE_DIR}/vk_mem_alloc.h"
-      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+if(TARGET aperture_c)
+  install(TARGETS aperture_c
+      EXPORT apertureTargets
   )
+endif()
+
+# --- volk / VMA headers (so installed Vulkan-backend consumers can compile)
+if(APERTURE_VOLK_INCLUDE_DIR)
+  file(TO_CMAKE_PATH "${APERTURE_VOLK_INCLUDE_DIR}" _aperture_volk_inc)
+  if(EXISTS "${_aperture_volk_inc}/volk.h")
+    install(FILES "${_aperture_volk_inc}/volk.h"
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+    if(EXISTS "${_aperture_volk_inc}/volk.c")
+      install(FILES "${_aperture_volk_inc}/volk.c"
+          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+      )
+    endif()
+  endif()
+endif()
+if(APERTURE_VMA_INCLUDE_DIR)
+  file(TO_CMAKE_PATH "${APERTURE_VMA_INCLUDE_DIR}" _aperture_vma_inc)
+  if(EXISTS "${_aperture_vma_inc}/vk_mem_alloc.h")
+    install(FILES "${_aperture_vma_inc}/vk_mem_alloc.h"
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+  endif()
 endif()
 
 install(EXPORT apertureTargets

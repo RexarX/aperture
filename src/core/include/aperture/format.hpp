@@ -89,7 +89,7 @@ enum class TextureFormat : uint8_t {
 }
 
 /// @brief Filter-time usage mask for `SupportsFormat`.
-enum class FormatUsage : uint16_t {
+enum class FormatUsage : uint32_t {
   Sample = 1U << 0U,
   Filter = 1U << 1U,
   Storage = 1U << 2U,

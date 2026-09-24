@@ -7,7 +7,7 @@
 namespace aperture {
 
 /// @brief Presentation modes reported by an adapter, as a bit mask.
-enum class PresentMode : uint8_t {
+enum class PresentMode : uint16_t {
   None = 0,
   Fifo = 1U << 0U,
   Immediate = 1U << 1U,

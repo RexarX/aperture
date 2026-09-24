@@ -6,6 +6,7 @@
 #include <aperture/result.hpp>
 #include <aperture/surface.hpp>
 #include <aperture/swapchain.hpp>
+#include <aperture/types.hpp>
 
 #include <cstdint>
 #include <span>
@@ -16,7 +17,8 @@ namespace aperture {
 /// @brief Frozen adapter record produced by Filter at instance creation.
 /// @details `impl` is valid until `Destroy` of the owning instance. `name` and
 /// `conformance_reason` are owned copies and remain valid for the lifetime of
-/// this record.
+/// this record. Strings come first, then pointers and 8-byte scalars, then
+/// 32-bit fields, then bytes.
 struct Adapter {
   std::string name;
   std::string conformance_reason;
@@ -25,10 +27,14 @@ struct Adapter {
   uint64_t local_memory_bytes = 0;
   uint64_t shared_memory_bytes = 0;
   uint64_t mapped_default_capacity = 0;
+  /// Power-of-two quantum. Every texture `SizeAlign::align` divides it.
+  uint64_t texture_heap_alignment = 0;
+  Capability capabilities = Capability::None;
   uint32_t index = 0;
   uint32_t vendor_id = 0;
   uint32_t device_id = 0;
   uint32_t driver_version = 0;
+  /// Hardware capacity. v1 creates one queue per enabled usage.
   uint32_t graphics_queue_count = 0;
   uint32_t compute_queue_count = 0;
   uint32_t copy_queue_count = 0;
@@ -38,14 +44,19 @@ struct Adapter {
   uint32_t max_sampler_heap_slots = 0;
   uint32_t max_texture_dimension_2d = 0;
   uint32_t subgroup_size = 0;
+  /// Nanoseconds per timestamp tick.
+  float timestamp_period_ns = 0.0F;
+  CopyGranularity copy_texture_granularity;
   uint8_t uuid[16] = {};
   uint8_t luid[8] = {};
-  Capability capabilities = Capability::None;
-  PresentMode present_modes = PresentMode::Fifo;
+  PresentMode present_modes = PresentMode::None;
   Error conformance = Error::Ok;
   bool discrete = false;
   bool conformant = false;
   bool luid_valid = false;
+  bool graphics_timestamps = false;
+  bool compute_timestamps = false;
+  bool copy_timestamps = false;
 };
 
 /// @brief True if the adapter reported every bit in `caps`.

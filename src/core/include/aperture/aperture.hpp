@@ -9,6 +9,9 @@
 #include <aperture/instance.hpp>
 #include <aperture/log.hpp>
 #include <aperture/math.hpp>
+#include <aperture/memory.hpp>
+#include <aperture/memory/bump_allocator.hpp>
+#include <aperture/memory/offset_allocator.hpp>
 #include <aperture/pipeline.hpp>
 #include <aperture/queue.hpp>
 #include <aperture/result.hpp>
@@ -17,3 +20,4 @@
 #include <aperture/sync.hpp>
 #include <aperture/texture.hpp>
 #include <aperture/types.hpp>
+#include <aperture/version.hpp>

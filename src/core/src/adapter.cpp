@@ -3,6 +3,7 @@
 #include <aperture/adapter.hpp>
 
 #include <aperture/format.hpp>
+#include <aperture/log.hpp>
 #include <aperture/surface.hpp>
 #include <aperture/types.hpp>
 
@@ -16,7 +17,7 @@ namespace aperture {
 
 bool SupportsFormat(const Adapter& adapter, TextureFormat format,
                     FormatUsage usage) noexcept {
-  if (adapter.impl == nullptr) {
+  if (adapter.impl == nullptr) [[unlikely]] {
     return false;
   }
 
@@ -30,13 +31,14 @@ bool SupportsFormat(const Adapter& adapter, TextureFormat format,
     }
 #endif
     default:
+      log::Error("Unsupported backend: {}!", ToString(backend));
       return false;
   }
 }
 
 auto PresentableFormats(const Adapter& adapter, const Surface& surface) noexcept
     -> std::span<const TextureFormat> {
-  if (adapter.impl == nullptr) {
+  if (adapter.impl == nullptr) [[unlikely]] {
     return {};
   }
 
@@ -50,6 +52,7 @@ auto PresentableFormats(const Adapter& adapter, const Surface& surface) noexcept
     }
 #endif
     default:
+      log::Error("Unsupported backend: {}!", ToString(backend));
       return {};
   }
 }

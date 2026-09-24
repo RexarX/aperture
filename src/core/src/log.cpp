@@ -49,6 +49,10 @@ bool HasCustomLogger() noexcept {
   return g_custom_logger.load(std::memory_order_relaxed) != nullptr;
 }
 
+Callback GetCustomLogger() noexcept {
+  return g_custom_logger.load(std::memory_order_relaxed);
+}
+
 void Log(Level level, std::string_view message) noexcept {
   if (Callback custom = g_custom_logger.load(std::memory_order_relaxed)) {
     custom(level, message);

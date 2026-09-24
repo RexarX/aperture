@@ -7,6 +7,8 @@
 namespace aperture {
 
 /// @brief Recoverable failure of a valid call. Not a programming assert.
+/// @details `Ok` is not stored in a `Result`. It is the success value of
+/// `Adapter::conformance` when the adapter meets the backend floor.
 enum class Error : uint8_t {
   Ok = 0,
   Unsupported,
@@ -15,6 +17,7 @@ enum class Error : uint8_t {
   Invalid,
   OutOfDate,
   Timeout,
+  VersionMismatch,
 };
 
 /// @brief Name of a recoverable `Error` enumerator.
@@ -37,6 +40,8 @@ enum class Error : uint8_t {
       return "OutOfDate";
     case Timeout:
       return "Timeout";
+    case VersionMismatch:
+      return "VersionMismatch";
   }
   return "Unknown";
 }

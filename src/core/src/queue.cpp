@@ -16,6 +16,7 @@ namespace aperture {
 
 Queue GraphicsQueue(Device device) noexcept {
   APERTURE_ASSERT(device.ptr != nullptr);
+
   switch (BackendOf(device)) {
     using enum Backend;
 #ifdef APERTURE_HAS_VULKAN
@@ -25,12 +26,15 @@ Queue GraphicsQueue(Device device) noexcept {
     }
 #endif
     default:
+      APERTURE_ASSERT(false, "Unsupported backend: {}!",
+                      ToString(BackendOf(device)));
       return {};
   }
 }
 
 auto ComputeQueue(Device device) noexcept -> Result<Queue> {
   APERTURE_ASSERT(device.ptr != nullptr);
+
   switch (BackendOf(device)) {
     using enum Backend;
 #ifdef APERTURE_HAS_VULKAN
@@ -44,12 +48,16 @@ auto ComputeQueue(Device device) noexcept -> Result<Queue> {
     }
 #endif
     default:
+      APERTURE_ASSERT(false, "Unsupported backend: {} ({})",
+                      ToString(BackendOf(device)),
+                      ToString(Error::Unsupported));
       return std::unexpected(Error::Unsupported);
   }
 }
 
 auto CopyQueue(Device device) noexcept -> Result<Queue> {
   APERTURE_ASSERT(device.ptr != nullptr);
+
   switch (BackendOf(device)) {
     using enum Backend;
 #ifdef APERTURE_HAS_VULKAN
@@ -63,6 +71,9 @@ auto CopyQueue(Device device) noexcept -> Result<Queue> {
     }
 #endif
     default:
+      APERTURE_ASSERT(false, "Unsupported backend: {} ({})",
+                      ToString(BackendOf(device)),
+                      ToString(Error::Unsupported));
       return std::unexpected(Error::Unsupported);
   }
 }

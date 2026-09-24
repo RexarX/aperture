@@ -1,7 +1,4 @@
-# Copy Slang's compiler shared library next to a consuming binary.
-#
-# Compile and reflection live in slang::slang. SPIR-V emission does not
-# need DXC at runtime.
+# Copy Slang's compiler shared library next to a consuming example binary.
 
 include_guard(GLOBAL)
 

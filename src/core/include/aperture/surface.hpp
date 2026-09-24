@@ -14,7 +14,7 @@ struct Win32Surface {
 /// @brief Xlib `Display*` / `Window` pair for `VK_KHR_xlib_surface`.
 struct XlibSurface {
   void* display = nullptr;
-  unsigned long window = 0;
+  uint64_t window = 0;
 };
 
 /// @brief XCB connection / window for `VK_KHR_xcb_surface`.

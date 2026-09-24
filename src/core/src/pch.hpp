@@ -3,12 +3,15 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <expected>
 #include <format>
+#include <memory>
 #include <memory_resource>
+#include <new>
 #include <source_location>
 #include <span>
 #include <string>

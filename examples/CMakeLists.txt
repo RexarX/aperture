@@ -1,6 +1,9 @@
 include(Glfw)
 aperture_setup_glfw()
 
+include(Slang)
+aperture_setup_slang()
+
 add_library(aperture_examples_common STATIC
     common/window.hpp
     common/window.cpp
@@ -18,6 +21,7 @@ target_compile_definitions(aperture_examples_common PUBLIC GLFW_INCLUDE_NONE)
 target_link_libraries(aperture_examples_common PUBLIC
     aperture::aperture
     glfw
+    aperture::lib::slang
 )
 
 if(XLIB_HEADERS)
@@ -60,3 +64,7 @@ aperture_add_example(
     NAME basic
     SOURCES basic.cpp
 )
+
+if(APERTURE_BUILD_C_BINDINGS)
+  add_subdirectory(bindings/c)
+endif()

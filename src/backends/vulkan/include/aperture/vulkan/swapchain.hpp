@@ -20,15 +20,15 @@ namespace aperture::vk {
 /// @details `PresentMode::Waitable` is adapter-level (`VK_KHR_present_wait` /
 /// `VK_KHR_present_id`) and is not a `VkPresentModeKHR`.
 struct PresentModeEntry {
-  PresentMode mode = PresentMode::None;
   VkPresentModeKHR vk = VK_PRESENT_MODE_FIFO_KHR;
+  PresentMode mode = PresentMode::None;
 };
 
 /// @brief Closed mapping used by `ToVkPresentMode` / `FromVkPresentMode`.
 inline constexpr PresentModeEntry APERTURE_TO_VK_PRESENT_MODE[] = {
-    {PresentMode::Fifo, VK_PRESENT_MODE_FIFO_KHR},
-    {PresentMode::Immediate, VK_PRESENT_MODE_IMMEDIATE_KHR},
-    {PresentMode::Mailbox, VK_PRESENT_MODE_MAILBOX_KHR},
+    {.vk = VK_PRESENT_MODE_FIFO_KHR, .mode = PresentMode::Fifo},
+    {.vk = VK_PRESENT_MODE_IMMEDIATE_KHR, .mode = PresentMode::Immediate},
+    {.vk = VK_PRESENT_MODE_MAILBOX_KHR, .mode = PresentMode::Mailbox},
 };
 
 /// @brief Sentinel returned by `ToVkPresentMode` when `mode` is not a WSI

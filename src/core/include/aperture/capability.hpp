@@ -7,23 +7,24 @@
 namespace aperture {
 
 /// @brief Optional device features negotiated at `CreateDevice`.
-/// @details Reported on `Adapter::capabilities`.
-enum class Capability : uint16_t {
-  None = 0,
-  MeshShading = 1U << 0U,
-  RayTracingPipeline = 1U << 1U,
-  RayQuery = 1U << 2U,
-  SeparateBlend = 1U << 3U,
-  HostImageCopy = 1U << 4U,
-  UnifiedImageLayouts = 1U << 5U,
-  DeviceGeneratedCommands = 1U << 6U,
-  AsyncCompute = 1U << 7U,
-  AsyncCopy = 1U << 8U,
-  PresentFromCompute = 1U << 9U,
-  CooperativeMatrix = 1U << 10U,
-  FramebufferFetch = 1U << 11U,
-  BufferInt64Atomics = 1U << 12U,
-  SplitBarriers = 1U << 13U,
+/// @details Reported on `Adapter::capabilities`. Stored as `uint64_t` so new
+/// bits can be added without changing the type.
+enum class Capability : uint64_t {
+  None = 0ULL,
+  MeshShading = 1ULL << 0ULL,
+  RayTracingPipeline = 1ULL << 1ULL,
+  RayQuery = 1ULL << 2ULL,
+  SeparateBlend = 1ULL << 3ULL,
+  HostImageCopy = 1ULL << 4ULL,
+  UnifiedImageLayouts = 1ULL << 5ULL,
+  DeviceGeneratedCommands = 1ULL << 6ULL,
+  AsyncCompute = 1ULL << 7ULL,
+  AsyncCopy = 1ULL << 8ULL,
+  PresentFromCompute = 1ULL << 9ULL,
+  CooperativeMatrix = 1ULL << 10ULL,
+  FramebufferFetch = 1ULL << 11ULL,
+  BufferInt64Atomics = 1ULL << 12ULL,
+  SplitBarriers = 1ULL << 13ULL,
 };
 
 /// @brief Name of a `Capability` enumerator.
