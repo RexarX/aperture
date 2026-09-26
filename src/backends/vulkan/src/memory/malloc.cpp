@@ -3,11 +3,12 @@
 #include <aperture/vulkan/memory/malloc.hpp>
 
 #include <aperture/assert.hpp>
-#include <aperture/commands.hpp>
+#include <aperture/memory/malloc.hpp>
 #include <aperture/queue.hpp>
 #include <aperture/result.hpp>
 #include <aperture/types.hpp>
 #include <aperture/utils/bit.hpp>
+#include <aperture/utils/flags.hpp>
 
 #include "internal.hpp"
 #include "storage.hpp"

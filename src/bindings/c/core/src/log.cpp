@@ -3,10 +3,10 @@
 #include <aperture/assert.hpp>
 #include <aperture/log.hpp>
 
-#include <stdbool.h>
 #include <array>
 #include <atomic>
 #include <cstdarg>
+#include <cstdbool>
 #include <cstddef>
 #include <cstdio>
 #include <cstring>

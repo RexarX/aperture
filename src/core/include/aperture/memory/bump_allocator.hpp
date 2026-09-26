@@ -23,7 +23,7 @@ public:
 
   /// @brief One contiguous range inside the managed storage.
   struct Allocation {
-    static constexpr uint64_t NO_SPACE = ~uint64_t{0};
+    static constexpr auto NO_SPACE = ~uint64_t{0};
 
     uint64_t offset = NO_SPACE;
     uint64_t size = 0;

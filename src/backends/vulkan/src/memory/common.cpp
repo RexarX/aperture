@@ -9,7 +9,6 @@
 #include "memory/storage.hpp"
 
 #include <cstddef>
-#include <cstdint>
 
 namespace aperture::vk {
 
@@ -26,14 +25,12 @@ auto DeviceAddressOf(Device* device, void* host) noexcept -> GpuPtr<std::byte> {
   return {.addr = found->second};
 }
 
-Buffer GetVkBuffer(aperture::Device device, GpuPtr<std::byte> ptr) noexcept {
-  APERTURE_ASSERT(device.ptr != nullptr);
-  auto* impl = static_cast<Device*>(device.ptr);
-  APERTURE_ASSERT(impl->backend == Backend::Vulkan);
-  APERTURE_ASSERT(impl->memory != nullptr);
+ResolvedRange FindRange(Device* device, GpuPtr<std::byte> ptr) noexcept {
+  APERTURE_ASSERT(device != nullptr);
+  APERTURE_ASSERT(device->memory != nullptr);
   APERTURE_ASSERT(ptr.addr != 0);
 
-  MemoryState* state = impl->memory;
+  MemoryState* state = device->memory;
   const HeapGuard guard(state);
 
   const MallocRecord* match = nullptr;
@@ -50,13 +47,29 @@ Buffer GetVkBuffer(aperture::Device device, GpuPtr<std::byte> ptr) noexcept {
       }
     }
   }
-  if (match != nullptr) {
-    return BufferFromBlock(*match->block, ptr.addr,
-                           match->device_addr + match->size - ptr.addr);
-  }
+  APERTURE_ASSERT(match != nullptr, "Unknown GpuPtr!");
+  APERTURE_ASSERT(match->block != nullptr);
 
-  APERTURE_ASSERT(false, "Unknown GpuPtr!");
-  return {};
+  return {
+      .buffer = match->block->buffer,
+      .offset = ptr.addr - match->block->gpu_base,
+      .remaining = match->device_addr + match->size - ptr.addr,
+      .usage = match->block->usage,
+  };
+}
+
+Buffer GetVkBuffer(aperture::Device device, GpuPtr<std::byte> ptr) noexcept {
+  APERTURE_ASSERT(device.ptr != nullptr);
+  auto* impl = static_cast<Device*>(device.ptr);
+  APERTURE_ASSERT(impl->backend == Backend::Vulkan);
+
+  const ResolvedRange found = FindRange(impl, ptr);
+  return {
+      .buffer = found.buffer,
+      .address = ptr.addr,
+      .offset = found.offset,
+      .size = found.remaining,
+  };
 }
 
 }  // namespace aperture::vk

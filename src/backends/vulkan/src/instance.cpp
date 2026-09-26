@@ -7,6 +7,7 @@
 #include <aperture/result.hpp>
 #include <aperture/swapchain.hpp>
 #include <aperture/vulkan/swapchain.hpp>
+
 #include "internal.hpp"
 
 #include <aperture/vulkan/header.hpp>
@@ -102,9 +103,9 @@ void GatherMemory(const VkPhysicalDeviceMemoryProperties& memory,
   }
 }
 
-void CountQueues(std::span<const VkQueueFamilyProperties> families,
-                 uint32_t* graphics, uint32_t* compute,
-                 uint32_t* copy) noexcept {
+constexpr void CountQueues(std::span<const VkQueueFamilyProperties> families,
+                           uint32_t* graphics, uint32_t* compute,
+                           uint32_t* copy) noexcept {
   APERTURE_ASSERT(graphics != nullptr);
   APERTURE_ASSERT(compute != nullptr);
   APERTURE_ASSERT(copy != nullptr);
@@ -124,8 +125,8 @@ void CountQueues(std::span<const VkQueueFamilyProperties> families,
   }
 }
 
-[[nodiscard]] uint32_t HeapSlotCount(VkDeviceSize heap_bytes,
-                                     VkDeviceSize stride) noexcept {
+[[nodiscard]] constexpr uint32_t HeapSlotCount(VkDeviceSize heap_bytes,
+                                               VkDeviceSize stride) noexcept {
   if (stride == 0) {
     return 0;
   }

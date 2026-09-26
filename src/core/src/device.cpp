@@ -83,6 +83,22 @@ bool Has(Device device, Capability caps) noexcept {
   }
 }
 
+auto WaitIdle(Device device) noexcept -> Result<void> {
+  APERTURE_ASSERT(device.ptr != nullptr);
+
+  switch (BackendOf(device)) {
+    using enum Backend;
+#ifdef APERTURE_HAS_VULKAN
+    case Vulkan:
+      return vk::WaitIdle(static_cast<vk::Device*>(device.ptr));
+#endif
+    default:
+      log::Error("Unsupported backend: {} ({})!", ToString(BackendOf(device)),
+                 ToString(Error::Unsupported));
+      return std::unexpected(Error::Unsupported);
+  }
+}
+
 const DeviceInfo& Info(Device device) noexcept {
   APERTURE_ASSERT(device.ptr != nullptr);
 

@@ -3,7 +3,6 @@
 #include <aperture/instance.h>
 #include <aperture/result.h>
 #include <aperture/surface.h>
-#include <aperture/vulkan/header.h>
 #include <aperture/assert.hpp>
 #include <aperture/vulkan/instance.hpp>
 #include <aperture/vulkan/surface.hpp>

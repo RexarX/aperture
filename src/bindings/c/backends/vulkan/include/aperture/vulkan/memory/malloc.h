@@ -1,8 +1,8 @@
 #ifndef APERTURE_VULKAN_MEMORY_MALLOC_H
 #define APERTURE_VULKAN_MEMORY_MALLOC_H
 
-#include <aperture/commands.h>
 #include <aperture/device.h>
+#include <aperture/memory/malloc.h>
 #include <aperture/platform.h>
 #include <aperture/queue.h>
 #include <aperture/result.h>

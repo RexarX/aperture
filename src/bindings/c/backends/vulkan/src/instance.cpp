@@ -2,7 +2,6 @@
 
 #include <aperture/instance.h>
 #include <aperture/result.h>
-#include <aperture/vulkan/header.h>
 #include <aperture/assert.hpp>
 #include <aperture/instance.hpp>
 #include <aperture/result.hpp>
@@ -10,8 +9,8 @@
 
 #include "convert.hpp"
 
-#include <stdbool.h>
-#include <stddef.h>
+#include <cstdbool>
+#include <cstddef>
 
 extern "C" {
 

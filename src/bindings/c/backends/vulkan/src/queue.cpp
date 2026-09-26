@@ -1,12 +1,11 @@
 #include <aperture/vulkan/queue.h>
 
 #include <aperture/queue.h>
-#include <aperture/vulkan/header.h>
 #include <aperture/vulkan/queue.hpp>
 
 #include "convert.hpp"
 
-#include <stdint.h>
+#include <cstdint>
 
 extern "C" {
 

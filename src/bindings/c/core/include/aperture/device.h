@@ -104,6 +104,13 @@ APERTURE_C_API bool aperture_device_has(
 APERTURE_C_API ApertureDeviceInfo aperture_device_info(ApertureDevice device)
     APERTURE_C_NOEXCEPT;
 
+/// @brief Waits until every queue on `device` is idle.
+/// @param device Device to wait on
+/// @return The wait error, or `APERTURE_ERROR_OK`
+/// @warning Asserts if `device` is null.
+APERTURE_C_API ApertureError aperture_wait_idle(ApertureDevice device)
+    APERTURE_C_NOEXCEPT;
+
 APERTURE_C_END
 
 #endif

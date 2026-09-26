@@ -18,6 +18,7 @@ namespace aperture::vk {
 
 struct Instance;
 struct MemoryState;
+struct CommandState;
 
 /// @brief Additive device extensions and a `pNext` feature chain.
 struct DeviceExtras {
@@ -41,6 +42,7 @@ struct Device {
   VkPhysicalDevice physical_device = VK_NULL_HANDLE;
   VmaAllocator allocator = VK_NULL_HANDLE;
   MemoryState* memory = nullptr;
+  CommandState* commands = nullptr;
   Queue graphics;
   Queue compute;
   Queue copy;
@@ -95,5 +97,12 @@ APERTURE_API void Destroy(Device* device) noexcept;
     const Device& device) noexcept {
   return device.info;
 }
+
+/// @brief `vkDeviceWaitIdle`.
+/// @param device Device to wait on
+/// @return Nothing, or a recoverable `Error`
+/// @warning Asserts if `device` is null.
+[[nodiscard]] APERTURE_API auto WaitIdle(Device* device) noexcept
+    -> Result<void>;
 
 }  // namespace aperture::vk

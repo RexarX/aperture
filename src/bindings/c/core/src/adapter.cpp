@@ -8,7 +8,7 @@
 
 #include "convert.hpp"
 
-#include <stddef.h>
+#include <cstddef>
 
 extern "C" {
 
@@ -16,6 +16,7 @@ bool aperture_supports_format(const ApertureAdapter* adapter,
                               ApertureTextureFormat format,
                               ApertureFormatUsage usage) noexcept {
   APERTURE_ASSERT(adapter != nullptr);
+
   aperture::Adapter cpp{};
   cpp.impl = adapter->impl;
   return aperture::SupportsFormat(cpp,
@@ -31,6 +32,7 @@ void aperture_presentable_formats(const ApertureAdapter* adapter,
   APERTURE_ASSERT(surface != nullptr);
   APERTURE_ASSERT(data != nullptr);
   APERTURE_ASSERT(size != nullptr);
+
   aperture::Adapter cpp{};
   cpp.impl = adapter->impl;
   const auto formats =

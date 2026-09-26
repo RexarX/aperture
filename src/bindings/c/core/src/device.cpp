@@ -20,6 +20,7 @@ ApertureError aperture_create_device(ApertureInstance instance,
                                      ApertureDevice* out) noexcept {
   APERTURE_ASSERT(desc != nullptr);
   APERTURE_ASSERT(out != nullptr);
+
   *out = nullptr;
   auto result = aperture::CreateDevice(aperture::cbind::ToCpp(instance),
                                        aperture::cbind::ToCpp(*desc));
@@ -42,5 +43,13 @@ bool aperture_device_has(ApertureDevice device,
 
 ApertureDeviceInfo aperture_device_info(ApertureDevice device) noexcept {
   return aperture::cbind::ToC(aperture::Info(aperture::cbind::ToCpp(device)));
+}
+
+ApertureError aperture_wait_idle(ApertureDevice device) noexcept {
+  auto waited = aperture::WaitIdle(aperture::cbind::ToCpp(device));
+  if (!waited) [[unlikely]] {
+    return aperture::cbind::ToCError(waited.error());
+  }
+  return APERTURE_ERROR_OK;
 }
 }

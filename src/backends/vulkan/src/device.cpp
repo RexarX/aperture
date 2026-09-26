@@ -9,6 +9,7 @@
 #include <aperture/result.hpp>
 #include <aperture/vulkan/queue.hpp>
 
+#include "command/state.hpp"
 #include "internal.hpp"
 #include "memory/storage.hpp"
 
@@ -63,8 +64,8 @@ struct DeviceFeatureChain {
           VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_UNTYPED_POINTERS_FEATURES_KHR};
 };
 
-void EnableRequiredFeatures(DeviceFeatureChain* chain,
-                            Capability requested) noexcept {
+constexpr void EnableRequiredFeatures(DeviceFeatureChain* chain,
+                                      Capability requested) noexcept {
   APERTURE_ASSERT(chain != nullptr);
   VkPhysicalDeviceFeatures& f = chain->features2.features;
   f.shaderInt64 = VK_TRUE;
@@ -111,8 +112,8 @@ void EnableRequiredFeatures(DeviceFeatureChain* chain,
   chain->untyped_pointers.shaderUntypedPointers = VK_TRUE;
 }
 
-[[nodiscard]] bool PickGraphicsFamily(const Adapter& record,
-                                      uint32_t* family) noexcept {
+[[nodiscard]] constexpr bool PickGraphicsFamily(const Adapter& record,
+                                                uint32_t* family) noexcept {
   APERTURE_ASSERT(family != nullptr);
   for (uint32_t i = 0; i < record.queue_families.size(); ++i) {
     if ((record.queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
@@ -123,8 +124,8 @@ void EnableRequiredFeatures(DeviceFeatureChain* chain,
   return false;
 }
 
-[[nodiscard]] bool PickDedicatedCompute(const Adapter& record,
-                                        uint32_t* family) noexcept {
+[[nodiscard]] constexpr bool PickDedicatedCompute(const Adapter& record,
+                                                  uint32_t* family) noexcept {
   APERTURE_ASSERT(family != nullptr);
   for (uint32_t i = 0; i < record.queue_families.size(); ++i) {
     const VkQueueFlags flags = record.queue_families[i].queueFlags;
@@ -137,8 +138,8 @@ void EnableRequiredFeatures(DeviceFeatureChain* chain,
   return false;
 }
 
-[[nodiscard]] bool PickDedicatedCopy(const Adapter& record,
-                                     uint32_t* family) noexcept {
+[[nodiscard]] constexpr bool PickDedicatedCopy(const Adapter& record,
+                                               uint32_t* family) noexcept {
   APERTURE_ASSERT(family != nullptr);
   for (uint32_t i = 0; i < record.queue_families.size(); ++i) {
     const VkQueueFlags flags = record.queue_families[i].queueFlags;
@@ -152,7 +153,8 @@ void EnableRequiredFeatures(DeviceFeatureChain* chain,
   return false;
 }
 
-void AddQueueCreateInfo(QueueSelection* queues, uint32_t family) noexcept {
+constexpr void AddQueueCreateInfo(QueueSelection* queues,
+                                  uint32_t family) noexcept {
   APERTURE_ASSERT(queues != nullptr);
   for (uint32_t i = 0; i < queues->create_info_count; ++i) {
     if (queues->create_infos[i].queueFamilyIndex == family) {
@@ -393,6 +395,7 @@ void AdoptFeatureStruct(DeviceFeatureChain* chain,
                         VkBaseOutStructure* node) noexcept {
   APERTURE_ASSERT(chain != nullptr);
   APERTURE_ASSERT(node != nullptr);
+
   switch (node->sType) {
     case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES: {
       const auto* src =
@@ -635,6 +638,9 @@ void DestroyPartialDevice(Device* device) noexcept {
     return;
   }
 
+  if (device->commands != nullptr) {
+    DestroyCommands(device);
+  }
   if (device->memory != nullptr) {
     DestroyMemory(device);
   }
@@ -735,6 +741,7 @@ auto CreateDevice(Instance* instance, const DeviceDesc& desc,
     return std::unexpected(allocator.error());
   }
   InitMemory(impl);
+  InitCommands(impl);
 
   const auto push_bytes = std::min(
       static_cast<uint32_t>(record->descriptor_heap_props.maxPushDataSize),
@@ -746,6 +753,17 @@ auto CreateDevice(Instance* instance, const DeviceDesc& desc,
 
 void Destroy(Device* device) noexcept {
   DestroyPartialDevice(device);
+}
+
+auto WaitIdle(Device* device) noexcept -> Result<void> {
+  APERTURE_ASSERT(device != nullptr);
+  const VkResult waited = vkDeviceWaitIdle(device->device);
+  if (waited != VK_SUCCESS) [[unlikely]] {
+    LogFailed(device->log_failed_results, "vkDeviceWaitIdle failed: {} ({})!",
+              ToString(waited), ToString(MapVkResult(waited)));
+    return std::unexpected(MapVkResult(waited));
+  }
+  return {};
 }
 
 Device& GetNative(aperture::Device device) noexcept {

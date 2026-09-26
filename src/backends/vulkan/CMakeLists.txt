@@ -2,10 +2,13 @@ aperture_add_backend(
     NAME vulkan
 
     HEADERS
+        include/aperture/vulkan/command/buffer.hpp
+        include/aperture/vulkan/command/pool.hpp
         include/aperture/vulkan/memory/common.hpp
         include/aperture/vulkan/memory/free.hpp
         include/aperture/vulkan/memory/malloc.hpp
         include/aperture/vulkan/adapter.hpp
+        include/aperture/vulkan/commands.hpp
         include/aperture/vulkan/device.hpp
         include/aperture/vulkan/format.hpp
         include/aperture/vulkan/header.hpp
@@ -14,12 +17,16 @@ aperture_add_backend(
         include/aperture/vulkan/queue.hpp
         include/aperture/vulkan/surface.hpp
         include/aperture/vulkan/swapchain.hpp
+        include/aperture/vulkan/sync.hpp
         include/aperture/vulkan/x11_undef.hpp
         include/aperture/vulkan.hpp
+        src/command/state.hpp
         src/memory/storage.hpp
         src/internal.hpp
 
     SOURCES
+        src/command/buffer.cpp
+        src/command/pool.cpp
         src/memory/common.cpp
         src/memory/free.cpp
         src/memory/malloc.cpp
@@ -29,6 +36,7 @@ aperture_add_backend(
         src/instance.cpp
         src/queue.cpp
         src/surface.cpp
+        src/sync.cpp
 
     PCH src/pch.hpp
 

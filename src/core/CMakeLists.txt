@@ -1,4 +1,6 @@
 set(APERTURE_CORE_HEADERS
+    include/aperture/command/buffer.hpp
+    include/aperture/command/pool.hpp
     include/aperture/memory/bump_allocator.hpp
     include/aperture/memory/common.hpp
     include/aperture/memory/free.hpp
@@ -35,6 +37,8 @@ set(APERTURE_CORE_HEADERS
 )
 
 set(APERTURE_CORE_SOURCES
+    src/command/buffer.cpp
+    src/command/pool.cpp
     src/memory/bump_allocator.cpp
     src/memory/common.cpp
     src/memory/free.cpp
@@ -45,9 +49,10 @@ set(APERTURE_CORE_SOURCES
     src/device.cpp
     src/instance.cpp
     src/log.cpp
-    src/queue.cpp
-    src/version.cpp
     src/pch.hpp
+    src/queue.cpp
+    src/sync.cpp
+    src/version.cpp
 )
 
 set(APERTURE_CORE_GENERATED_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")

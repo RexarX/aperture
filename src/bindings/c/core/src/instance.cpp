@@ -8,9 +8,9 @@
 
 #include "convert.hpp"
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <cstdbool>
+#include <cstddef>
+#include <cstdint>
 #include <span>
 
 extern "C" {
@@ -19,6 +19,7 @@ void aperture_compiled_backends(const ApertureBackend** data,
                                 size_t* size) noexcept {
   APERTURE_ASSERT(data != nullptr);
   APERTURE_ASSERT(size != nullptr);
+
   const std::span<const aperture::Backend> backends =
       aperture::CompiledBackends();
   *data = reinterpret_cast<const ApertureBackend*>(backends.data());
@@ -29,6 +30,7 @@ void aperture_available_backends(const ApertureBackend** data,
                                  size_t* size) noexcept {
   APERTURE_ASSERT(data != nullptr);
   APERTURE_ASSERT(size != nullptr);
+
   const std::span<const aperture::Backend> backends =
       aperture::AvailableBackends();
   *data = reinterpret_cast<const ApertureBackend*>(backends.data());
@@ -41,6 +43,7 @@ bool aperture_available(ApertureBackend backend) noexcept {
 
 ApertureError aperture_preferred_backend(ApertureBackend* out) noexcept {
   APERTURE_ASSERT(out != nullptr);
+
   auto result = aperture::PreferredBackend();
   if (!result) [[unlikely]] {
     return aperture::cbind::ToCError(result.error());
@@ -59,6 +62,7 @@ ApertureError aperture_create_instance(const ApertureInstanceDesc* desc,
                                        ApertureInstance* out) noexcept {
   APERTURE_ASSERT(desc != nullptr);
   APERTURE_ASSERT(out != nullptr);
+
   *out = nullptr;
   auto result = aperture::CreateInstance(aperture::cbind::ToCpp(*desc));
   if (!result) [[unlikely]] {
@@ -73,6 +77,7 @@ ApertureError aperture_create_instance_for(ApertureBackend backend,
                                            ApertureInstance* out) noexcept {
   APERTURE_ASSERT(desc != nullptr);
   APERTURE_ASSERT(out != nullptr);
+
   *out = nullptr;
   auto result = aperture::CreateInstance(aperture::cbind::ToCppBackend(backend),
                                          aperture::cbind::ToCpp(*desc));

@@ -1,4 +1,6 @@
 set(APERTURE_C_CORE_HEADERS
+    include/aperture/command/buffer.h
+    include/aperture/command/pool.h
     include/aperture/memory/bump_allocator.h
     include/aperture/memory/common.h
     include/aperture/memory/free.h
@@ -29,6 +31,8 @@ set(APERTURE_C_CORE_HEADERS
 )
 
 set(APERTURE_C_CORE_SOURCES
+    src/command/buffer.cpp
+    src/command/pool.cpp
     src/memory/bump_allocator.cpp
     src/memory/common.cpp
     src/memory/free.cpp
@@ -36,12 +40,13 @@ set(APERTURE_C_CORE_SOURCES
     src/memory/offset_allocator.cpp
     src/adapter.cpp
     src/assert.cpp
+    src/convert.hpp
     src/device.cpp
     src/instance.cpp
     src/log.cpp
     src/queue.cpp
+    src/sync.cpp
     src/version.cpp
-    src/convert.hpp
 )
 
 aperture_add_c_module(

@@ -3,7 +3,6 @@
 #include <aperture/memory/malloc.hpp>
 
 #include <aperture/assert.hpp>
-#include <aperture/commands.hpp>
 #include <aperture/device.hpp>
 #include <aperture/log.hpp>
 #include <aperture/queue.hpp>

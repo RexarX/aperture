@@ -5,8 +5,8 @@
 #include <aperture/assert.hpp>
 #include <aperture/vulkan/adapter.hpp>
 
-#include <stdbool.h>
-#include <stddef.h>
+#include <cstdbool>
+#include <cstddef>
 
 namespace {
 

@@ -296,6 +296,10 @@ int main() {
   ApertureOffsetAllocator offsets = NULL;
   ApertureDualPtr dedicated = {0};
   ApertureBumpAllocator dedicated_bump = NULL;
+  ApertureTimeline timeline = NULL;
+  ApertureCommandPool command_pool = NULL;
+  ApertureDualPtr copy_src = {0};
+  ApertureDualPtr copy_dst = {0};
 
   error = aperture_create_device(instance, &device_desc, &device);
   if (error != APERTURE_ERROR_OK) {
@@ -529,19 +533,101 @@ int main() {
       words[0],
       (unsigned long long)(dedicated.device.addr + dedicated_span.offset));
 
-#ifdef APERTURE_HAS_VULKAN
-  if (aperture_backend_of_instance(instance) == APERTURE_BACKEND_VULKAN) {
-    const ApertureVkBuffer buf = aperture_vk_buffer(device, numbers.device);
-    aperture_log_infof("vk_buffer offset=%llu size=%llu addr=0x%llx",
-                       (unsigned long long)buf.offset,
-                       (unsigned long long)buf.size,
-                       (unsigned long long)buf.address);
+  error = aperture_create_timeline(device, 0, &timeline);
+  if (error != APERTURE_ERROR_OK) {
+    aperture_log_errorf("CreateTimeline failed (%s)!",
+                        aperture_error_to_string(error));
+    goto cleanup;
   }
-#endif
+
+  ApertureCommandPoolDesc pool_desc = {.max_timestamps = 0};
+  error = aperture_create_command_pool(graphics, &pool_desc, &command_pool);
+  if (error != APERTURE_ERROR_OK) {
+    aperture_log_errorf("CreateCommandPool failed (%s)!",
+                        aperture_error_to_string(error));
+    goto cleanup;
+  }
+
+  error = aperture_malloc(
+      device, 4U * sizeof(uint32_t), alignof(uint32_t), APERTURE_MEMORY_DEFAULT,
+      APERTURE_QUEUE_USAGE_GRAPHICS, APERTURE_MALLOC_FLAGS_NONE, &copy_src);
+  if (error != APERTURE_ERROR_OK) {
+    aperture_log_errorf("Copy source malloc failed (%s)!",
+                        aperture_error_to_string(error));
+    goto cleanup;
+  }
+  error =
+      aperture_malloc(device, 4U * sizeof(uint32_t), alignof(uint32_t),
+                      APERTURE_MEMORY_READBACK, APERTURE_QUEUE_USAGE_GRAPHICS,
+                      APERTURE_MALLOC_FLAGS_NONE, &copy_dst);
+  if (error != APERTURE_ERROR_OK) {
+    aperture_log_errorf("Copy destination malloc failed (%s)!",
+                        aperture_error_to_string(error));
+    goto cleanup;
+  }
+
+  uint32_t* copy_src_words = (uint32_t*)copy_src.host;
+  copy_src_words[0] = 11;
+  copy_src_words[1] = 22;
+  copy_src_words[2] = 33;
+  copy_src_words[3] = 44;
+
+  ApertureCommandBuffer command = NULL;
+  error = aperture_begin(command_pool, &command);
+  if (error != APERTURE_ERROR_OK) {
+    aperture_log_errorf("Begin failed (%s)!", aperture_error_to_string(error));
+    goto cleanup;
+  }
+  aperture_barrier(command, APERTURE_STAGE_HOST, APERTURE_STAGE_COPY,
+                   APERTURE_HAZARD_NONE);
+  const ApertureGpuRange copy_dst_range =
+      aperture_gpu_range_from_dual(copy_dst, 4U, sizeof(uint32_t));
+  const ApertureGpuRange copy_src_range =
+      aperture_gpu_range_from_dual(copy_src, 4U, sizeof(uint32_t));
+  aperture_copy(command, copy_dst_range, copy_src_range);
+
+  ApertureTimelineSignal signal = {.timeline = timeline, .value = 1};
+  ApertureSubmitDesc submit_desc = {
+      .buffers = &command,
+      .buffer_count = 1,
+      .waits = NULL,
+      .wait_count = 0,
+      .signals = &signal,
+      .signal_count = 1,
+  };
+  error = aperture_submit(graphics, &submit_desc);
+  if (error != APERTURE_ERROR_OK) {
+    aperture_log_errorf("Submit failed (%s)!", aperture_error_to_string(error));
+    goto cleanup;
+  }
+  aperture_wait_timeline(timeline, 1);
+  const uint64_t signaled = aperture_timeline_current_value(timeline);
+  uint32_t* copy_dst_words = (uint32_t*)copy_dst.host;
+  aperture_log_infof("copy timeline=%llu dst=%u/%u/%u/%u",
+                     (unsigned long long)signaled, copy_dst_words[0],
+                     copy_dst_words[1], copy_dst_words[2], copy_dst_words[3]);
+  if (signaled != 1 || copy_dst_words[0] != 11 || copy_dst_words[1] != 22 ||
+      copy_dst_words[2] != 33 || copy_dst_words[3] != 44) {
+    aperture_log_error("Copy readback mismatch!");
+    error = APERTURE_ERROR_INVALID;
+    goto cleanup;
+  }
 
   error = APERTURE_ERROR_OK;
 
 cleanup:
+  if (command_pool != NULL) {
+    aperture_destroy_command_pool(command_pool);
+  }
+  if (timeline != NULL) {
+    aperture_destroy_timeline(timeline);
+  }
+  if (copy_dst.host != NULL) {
+    aperture_free(device, copy_dst);
+  }
+  if (copy_src.host != NULL) {
+    aperture_free(device, copy_src);
+  }
   if (dedicated_bump != NULL) {
     aperture_bump_allocator_destroy(dedicated_bump);
   }

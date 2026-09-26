@@ -401,11 +401,85 @@ int main() {
   log::Info("malloc_dedicated bytes={} host[0]={} gpu={:#x}", dedicated_bytes,
             words[0], dedicated_range.ptr.device.addr);
 
-  if (BackendOf(instance) == Backend::Vulkan) {
-    const vk::Buffer buf =
-        vk::GetVkBuffer(device, numbers.device.template As<std::byte>());
-    log::Info("vk_buffer offset={} size={} addr={:#x}", buf.offset, buf.size,
-              buf.address);
+  auto timeline_result = CreateTimeline(device);
+  if (!timeline_result) {
+    log::Error("CreateTimeline failed ({})!",
+               ToString(timeline_result.error()));
+    return 1;
+  }
+  Timeline timeline = *timeline_result;
+  APERTURE_DEFER {
+    Destroy(timeline);
+  };
+
+  auto pool_result = CreateCommandPool(graphics);
+  if (!pool_result) {
+    log::Error("CreateCommandPool failed ({})!", ToString(pool_result.error()));
+    return 1;
+  }
+  CommandPool pool = *pool_result;
+  APERTURE_DEFER {
+    Destroy(pool);
+  };
+
+  constexpr uint32_t copy_count = 4;
+  auto copy_src_result = Malloc<uint32_t>(device, copy_count);
+  if (!copy_src_result) {
+    log::Error("Copy source Malloc failed ({})!",
+               ToString(copy_src_result.error()));
+    return 1;
+  }
+  DualPtr<uint32_t> copy_src = *copy_src_result;
+  APERTURE_DEFER {
+    Free(device, copy_src);
+  };
+  auto copy_dst_result = Malloc<uint32_t>(device, copy_count, Memory::Readback);
+  if (!copy_dst_result) {
+    log::Error("Copy destination Malloc failed ({})!",
+               ToString(copy_dst_result.error()));
+    return 1;
+  }
+  DualPtr<uint32_t> copy_dst = *copy_dst_result;
+  APERTURE_DEFER {
+    Free(device, copy_dst);
+  };
+
+  copy_src.host[0] = 11;
+  copy_src.host[1] = 22;
+  copy_src.host[2] = 33;
+  copy_src.host[3] = 44;
+
+  auto begun = Begin(pool);
+  if (!begun) {
+    log::Error("Begin failed ({})!", ToString(begun.error()));
+    return 1;
+  }
+  CommandBuffer command = *begun;
+  Barrier(&command, Stage::Host, Stage::Copy);
+  Copy(&command, GpuRangeFrom(copy_dst, copy_count),
+       GpuRangeFrom(copy_src, copy_count));
+
+  CommandBuffer submit_buffers[] = {command};
+  const TimelineSignal signals[] = {{
+      .timeline = timeline,
+      .value = 1,
+  }};
+  auto submitted = Submit(graphics, {
+                                        .buffers = submit_buffers,
+                                        .signals = signals,
+                                    });
+  if (!submitted) {
+    log::Error("Submit failed ({})!", ToString(submitted.error()));
+    return 1;
+  }
+  Wait(timeline, 1);
+  const uint64_t signaled = CurrentValue(timeline);
+  log::Info("copy timeline={} dst={}/{}/{}/{}", signaled, copy_dst.host[0],
+            copy_dst.host[1], copy_dst.host[2], copy_dst.host[3]);
+  if (signaled != 1 || copy_dst.host[0] != 11 || copy_dst.host[1] != 22 ||
+      copy_dst.host[2] != 33 || copy_dst.host[3] != 44) {
+    log::Error("Copy readback mismatch!");
+    return 1;
   }
 
   return 0;

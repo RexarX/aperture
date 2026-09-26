@@ -3,8 +3,8 @@
 #include <aperture/assert.hpp>
 #include <aperture/memory/offset_allocator.hpp>
 
-#include <stdbool.h>
-#include <stdint.h>
+#include <cstdbool>
+#include <cstdint>
 
 extern "C" {
 
@@ -12,6 +12,7 @@ ApertureOffsetAllocator aperture_offset_allocator_create(
     uint32_t size, uint32_t max_allocs) noexcept {
   APERTURE_ASSERT(size != 0);
   APERTURE_ASSERT(max_allocs != 0);
+
   auto* allocator = new aperture::OffsetAllocator{size, max_allocs};
   return reinterpret_cast<ApertureOffsetAllocator>(allocator);
 }
@@ -32,6 +33,7 @@ void aperture_offset_allocator_reset(
 ApertureOffsetAllocation aperture_offset_allocator_allocate(
     ApertureOffsetAllocator allocator, uint32_t size) noexcept {
   APERTURE_ASSERT(allocator != nullptr);
+
   auto* alloc = reinterpret_cast<aperture::OffsetAllocator*>(allocator);
   const auto allocation = alloc->Allocate(size);
   return {
@@ -67,6 +69,7 @@ bool aperture_offset_allocator_empty(
 ApertureOffsetStorageReport aperture_offset_allocator_report(
     ApertureOffsetAllocator allocator) noexcept {
   APERTURE_ASSERT(allocator != nullptr);
+
   auto* alloc = reinterpret_cast<aperture::OffsetAllocator*>(allocator);
   const auto report = alloc->Report();
   return {

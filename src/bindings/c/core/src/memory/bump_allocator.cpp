@@ -3,8 +3,8 @@
 #include <aperture/assert.hpp>
 #include <aperture/memory/bump_allocator.hpp>
 
-#include <stdbool.h>
-#include <stdint.h>
+#include <cstdbool>
+#include <cstdint>
 
 extern "C" {
 
@@ -28,6 +28,7 @@ void aperture_bump_allocator_reset(ApertureBumpAllocator allocator) noexcept {
 ApertureBumpAllocation aperture_bump_allocator_allocate(
     ApertureBumpAllocator allocator, uint64_t size, uint64_t align) noexcept {
   APERTURE_ASSERT(allocator != nullptr);
+
   auto* alloc = reinterpret_cast<aperture::BumpAllocator*>(allocator);
   const auto allocation = alloc->Allocate(size, align);
   return {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <aperture/vulkan/adapter.hpp>
+#include <aperture/vulkan/commands.hpp>
 #include <aperture/vulkan/descriptor.hpp>
 #include <aperture/vulkan/device.hpp>
 #include <aperture/vulkan/format.hpp>
@@ -9,3 +10,4 @@
 #include <aperture/vulkan/queue.hpp>
 #include <aperture/vulkan/surface.hpp>
 #include <aperture/vulkan/swapchain.hpp>
+#include <aperture/vulkan/sync.hpp>

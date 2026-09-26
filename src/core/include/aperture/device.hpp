@@ -110,4 +110,12 @@ APERTURE_API void Destroy(Device device) noexcept;
 /// @warning Asserts if `device` is null.
 [[nodiscard]] APERTURE_API const DeviceInfo& Info(Device device) noexcept;
 
+/// @brief Waits until every queue on `device` is idle.
+/// @param device Device to wait on
+/// @return Nothing, or `Error::DeviceLost` / `Error::OutOfMemory`
+/// @warning Asserts if `device` is null.
+/// @note Not called from `Destroy`.
+[[nodiscard]] APERTURE_API auto WaitIdle(Device device) noexcept
+    -> Result<void>;
+
 }  // namespace aperture

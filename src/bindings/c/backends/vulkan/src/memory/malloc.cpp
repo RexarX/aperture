@@ -1,19 +1,21 @@
 #include <aperture/vulkan/memory/malloc.h>
 
-#include <aperture/commands.h>
 #include <aperture/device.h>
+#include <aperture/memory/common.h>
+#include <aperture/memory/malloc.h>
 #include <aperture/queue.h>
 #include <aperture/result.h>
 #include <aperture/types.h>
 #include <aperture/assert.hpp>
-#include <aperture/commands.hpp>
+#include <aperture/memory/common.hpp>
+#include <aperture/memory/malloc.hpp>
 #include <aperture/queue.hpp>
 #include <aperture/vulkan/device.hpp>
 #include <aperture/vulkan/memory/malloc.hpp>
 
 #include "convert.hpp"
 
-#include <stddef.h>
+#include <cstddef>
 
 extern "C" {
 

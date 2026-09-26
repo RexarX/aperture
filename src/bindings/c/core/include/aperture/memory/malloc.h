@@ -1,16 +1,40 @@
 #ifndef APERTURE_MEMORY_MALLOC_H
 #define APERTURE_MEMORY_MALLOC_H
 
-#include <aperture/commands.h>
 #include <aperture/device.h>
+#include <aperture/memory/common.h>
 #include <aperture/platform.h>
 #include <aperture/queue.h>
 #include <aperture/result.h>
 #include <aperture/types.h>
 
 #include <stddef.h>
+#include <stdint.h>
 
 APERTURE_C_BEGIN
+
+/// @brief Placement flags for malloc.
+typedef uint32_t ApertureMallocFlags;
+
+enum {
+  APERTURE_MALLOC_FLAGS_NONE = 0U,
+  APERTURE_MALLOC_FLAGS_DEDICATED = 1U << 0U,
+};
+
+/// @brief Name of an `ApertureMallocFlags` enumerator.
+/// @param flags Exact enumerator or `NONE`. Combined masks return `"Flags"`.
+/// @return Enumerator name, `"Flags"`, or `"Unknown"`
+static inline const char* aperture_malloc_flags_to_string(
+    ApertureMallocFlags flags) {
+  switch (flags) {
+    case APERTURE_MALLOC_FLAGS_NONE:
+      return "None";
+    case APERTURE_MALLOC_FLAGS_DEDICATED:
+      return "Dedicated";
+    default:
+      return "Flags";
+  }
+}
 
 /// @brief Allocates host-mapped device-local memory.
 /// @param device Device that owns the allocation

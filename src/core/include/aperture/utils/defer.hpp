@@ -76,7 +76,7 @@ struct DeferHelper {
  */
 #define APERTURE_DEFER                               \
   const auto APERTURE_CONCAT(_defer_, __COUNTER__) = \
-      ::aperture::utils::DeferHelper() + [&] APERTURE_ALWAYS_INLINE()
+      ::aperture::utils::DeferHelper{} + [&] APERTURE_ALWAYS_INLINE()
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)
 
@@ -86,7 +86,9 @@ struct DeferHelper {
  * objects.
  *
  * @code
- * auto cleanup = []() { std::cout << "Cleanup\n"; };
+ * auto cleanup = []() {
+ *   // Cleanup code here
+ * };
  * APERTURE_DEFER_CALL(cleanup);
  * @endcode
  */

@@ -1,17 +1,43 @@
 #pragma once
 
-#include <aperture/commands.hpp>
 #include <aperture/device.hpp>
+#include <aperture/memory/common.hpp>
 #include <aperture/platform.hpp>
 #include <aperture/queue.hpp>
 #include <aperture/result.hpp>
 #include <aperture/types.hpp>
 #include <aperture/utils/bit.hpp>
+#include <aperture/utils/flags.hpp>
 
 #include <cstddef>
+#include <cstdint>
 #include <expected>
+#include <string_view>
 
 namespace aperture {
+
+/// @brief Placement flags for `Malloc` and `MallocGpu`.
+enum class MallocFlags : uint32_t {
+  None = 0,
+  Dedicated = 1U << 0U,
+};
+
+/// @brief Name of a `MallocFlags` enumerator.
+/// @param flags Exact enumerator or `None`. Combined masks return `"Flags"`.
+/// @return Enumerator name, `"Flags"`, or `"Unknown"`
+[[nodiscard]] constexpr std::string_view ToString(MallocFlags flags) noexcept {
+  switch (flags) {
+    using enum MallocFlags;
+    case None:
+      return "None";
+    case Dedicated:
+      return "Dedicated";
+  }
+  return "Flags";
+}
+
+template <>
+inline constexpr bool IS_FLAGS<MallocFlags> = true;
 
 /// @brief Allocates host-mapped device-local memory.
 /// @details `Default` is write-combined and host-coherent. `Readback` is

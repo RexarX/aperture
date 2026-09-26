@@ -24,9 +24,9 @@ namespace aperture::vk {
 
 namespace {
 
-void FillQueueFamilies(const Device& device, QueueUsage usage,
-                       std::array<uint32_t, 3>* families,
-                       uint32_t* count) noexcept {
+constexpr void FillQueueFamilies(const Device& device, QueueUsage usage,
+                                 std::array<uint32_t, 3>* families,
+                                 uint32_t* count) noexcept {
   APERTURE_ASSERT(families != nullptr);
   APERTURE_ASSERT(count != nullptr);
 
@@ -51,7 +51,8 @@ void FillQueueFamilies(const Device& device, QueueUsage usage,
   }
 }
 
-void FillAllocInfo(HeapKind kind, VmaAllocationCreateInfo* info) noexcept {
+constexpr void FillAllocInfo(HeapKind kind,
+                             VmaAllocationCreateInfo* info) noexcept {
   APERTURE_ASSERT(info != nullptr);
 
   *info = {};

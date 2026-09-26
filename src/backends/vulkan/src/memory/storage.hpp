@@ -1,7 +1,7 @@
 #pragma once
 
 #include <aperture/assert.hpp>
-#include <aperture/commands.hpp>
+#include <aperture/memory/common.hpp>
 #include <aperture/memory/offset_allocator.hpp>
 #include <aperture/queue.hpp>
 #include <aperture/result.hpp>
@@ -139,6 +139,22 @@ inline void Unregister(MemoryState* state, const MallocRecord& rec) noexcept {
     state->by_host.erase(rec.host);
   }
 }
+
+/// @brief Spanning buffer that contains `ptr`, plus the allocation's queues.
+struct ResolvedRange {
+  VkBuffer buffer = VK_NULL_HANDLE;
+  uint64_t offset = 0;
+  uint64_t remaining = 0;
+  QueueUsage usage = QueueUsage::Graphics;
+};
+
+/// @brief Allocation that contains `ptr`.
+/// @param device Device that owns the heap
+/// @param ptr Device address, or an offset into an allocation
+/// @return Buffer, byte offset, bytes remaining, and queue mask
+/// @warning Asserts if `device` is null, `ptr` is 0, or `ptr` is unknown.
+[[nodiscard]] ResolvedRange FindRange(Device* device,
+                                      GpuPtr<std::byte> ptr) noexcept;
 
 [[nodiscard]] inline Buffer BufferFromBlock(const Block& block,
                                             uint64_t address,

@@ -3,7 +3,6 @@
 #include <aperture/device.h>
 #include <aperture/instance.h>
 #include <aperture/result.h>
-#include <aperture/vulkan/header.h>
 #include <aperture/assert.hpp>
 #include <aperture/device.hpp>
 #include <aperture/result.hpp>
@@ -11,8 +10,6 @@
 #include <aperture/vulkan/instance.hpp>
 
 #include "convert.hpp"
-
-#include <stddef.h>
 
 extern "C" {
 
